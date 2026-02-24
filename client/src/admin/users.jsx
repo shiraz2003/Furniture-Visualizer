@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 
 const Users = () => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false); // Confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   
@@ -25,10 +26,15 @@ const Users = () => {
     });
   };
 
-  const handleAddUser = (e) => {
+  // Step 1: Open Confirmation instead of direct adding
+  const handleSubmitClick = (e) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) return toast.error("Passwords do not match!");
-    
+    setShowConfirmModal(true);
+  };
+
+  // Step 2: Finalizing addition after confirmation
+  const handleAddUser = () => {
     const newUser = {
       id: Date.now(),
       name: `${formData.firstname} ${formData.lastname}`,
@@ -37,6 +43,7 @@ const Users = () => {
     };
     setUsers([...users, newUser]);
     toast.success("User added!");
+    setShowConfirmModal(false);
     setShowAddModal(false);
     setFormData({ firstname: '', lastname: '', email: '', password: '', confirmPassword: '' });
   };
@@ -49,7 +56,7 @@ const Users = () => {
   };
 
   return (
-    <div className="relative min-h-[80vh] pb-24 lg:pb-0">
+    <div className="relative min-h-full pb-24 lg:pb-0">
       {/* --- Header Section --- */}
       <div className="flex justify-between items-center mb-6 sm:mb-10">
         <div>
@@ -57,7 +64,6 @@ const Users = () => {
           <p className="text-slate-500 text-xs sm:text-sm mt-1">Manage system access and accounts.</p>
         </div>
 
-        {/* Desktop Add Button - Hidden on mobile */}
         <button 
           onClick={() => setShowAddModal(true)}
           className="hidden md:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg font-medium"
@@ -74,9 +80,7 @@ const Users = () => {
         <HiPlus size={28} />
       </button>
 
-      {/* --- Users List: Responsive View --- */}
-      
-      {/* 1. Desktop Table View - Hidden on mobile */}
+      {/* 1. Desktop Table View */}
       <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50/50 border-b border-slate-200">
@@ -112,7 +116,7 @@ const Users = () => {
         </table>
       </div>
 
-      {/* 2. Mobile Card View - Visible only on small screens */}
+      {/* 2. Mobile Card View */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
         {users.map(user => (
           <div key={user.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
@@ -142,7 +146,7 @@ const Users = () => {
         ))}
       </div>
 
-      {/* --- MODALS --- */}
+      {/* --- ADD MODAL --- */}
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}></div>
@@ -151,7 +155,7 @@ const Users = () => {
               <h3 className="font-bold text-slate-800">Create New Account</h3>
               <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><HiOutlineX size={20} /></button>
             </div>
-            <form onSubmit={handleAddUser} className="p-6 space-y-4">
+            <form onSubmit={handleSubmitClick} className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input type="text" name="firstname" required placeholder="First Name" onChange={handleInputChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
                 <input type="text" name="lastname" required placeholder="Last Name" onChange={handleInputChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
@@ -165,7 +169,25 @@ const Users = () => {
         </div>
       )}
 
-      {/* Delete Modal - Simplified for Mobile */}
+      {/* --- CONFIRM ADD MODAL --- */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)}></div>
+          <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center animate-in zoom-in duration-200 shadow-2xl">
+            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <HiOutlineUserAdd size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800">Confirm Creation</h3>
+            <p className="text-slate-500 my-3 text-sm">Create a new system account for <b>{formData.firstname}</b>?</p>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium">Cancel</button>
+              <button onClick={handleAddUser} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-indigo-200">Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)}></div>
