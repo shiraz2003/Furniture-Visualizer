@@ -9,6 +9,7 @@ import Viewer3D from './pages/Viewer3D.jsx';
 import AdminLayout from './admin/adminlayout.jsx';
 import AdminDashboard from './admin/dashboard.jsx';
 import Users from './admin/users';
+import Items from './admin/items.jsx';
 
 import Registration from './pages/registrationPage.jsx';
 import ForgotPassword from './pages/forgottenpassword.jsx';
@@ -22,6 +23,7 @@ function App() {
         <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<Users />} />
+        <Route path="items" element={<Items />} />
         </Route>
 
         {/* User Section */}
