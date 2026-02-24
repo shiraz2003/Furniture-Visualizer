@@ -1,15 +1,23 @@
 import 'dotenv/config';
 import express from 'express';
+import cors from 'cors';
 import mongoose from 'mongoose';
 import userRouter from './routes/auth.js';
 
 const app = express();
 
+// CORS middleware - allow requests from frontend
+app.use(cors({
+    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000'],
+    credentials: true
+}));
+
 // Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/api', userRouter);
+app.use('/api/auth', userRouter);
+
 
 const connectionString = process.env.MONGO_URI;
 mongoose.connect(connectionString)
