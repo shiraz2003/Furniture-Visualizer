@@ -1,11 +1,13 @@
-import React, { useState } from 'react'; 
+import React, { useState, useEffect } from 'react'; // useEffect එක් කළා
 import { 
   HiOutlineUsers, 
   HiOutlineCube, 
   HiOutlineClock 
 } from 'react-icons/hi';
+import axios from 'axios'; // axios එක් කළා
 
 const AdminDashboard = () => {
+  // --- පවතින Items Array එක ---
   const items = [
     { id: 1, name: "Modern Sofa", category: "Living Room" },
     { id: 2, name: "Office Chair", category: "Office" },
@@ -17,14 +19,30 @@ const AdminDashboard = () => {
     { id: 8, name: "Bar Stool", category: "Kitchen" }
   ];
 
-
   const [showAll, setShowAll] = useState(false);
+  
+  // --- අලුතින් එක් කළ State එක (Users ගණන සඳහා) ---
+  const [userCount, setUserCount] = useState('...'); 
 
-  // Stats data array
+  // --- Backend එකෙන් ඇත්තම Usersලා ගණන ලබා ගැනීම ---
+  useEffect(() => {
+    const fetchUserCount = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/admin/users');
+        setUserCount(response.data.length.toString());
+      } catch (error) {
+        console.error("Error fetching user count:", error);
+        setUserCount('0'); // Error එකක් ආවොත් 0 පෙන්වන්න
+      }
+    };
+    fetchUserCount();
+  }, []);
+
+  // Stats data array (Value එක දැන් Dynamic වේ)
   const stats = [
     { 
       label: 'Total Users', 
-      value: '24', 
+      value: userCount, // මෙතනට userCount ලබා දුන්නා
       icon: <HiOutlineUsers size={28} />, 
       color: 'from-blue-600 to-indigo-600',
       shadow: 'shadow-blue-100'
@@ -37,7 +55,6 @@ const AdminDashboard = () => {
       shadow: 'shadow-purple-100'
     },
   ];
-
 
   const displayItems = showAll ? [...items].reverse() : [...items].reverse().slice(0, 3);
 

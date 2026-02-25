@@ -27,6 +27,7 @@ const Users = () => {
       }));
       setUsers(formattedUsers);
     } catch (error) {
+      console.error(error);
       toast.error("Failed to load users");
     }
   };
@@ -67,6 +68,7 @@ const Users = () => {
       setShowDeleteModal(false);
       setUserToDelete(null);
     } catch (error) {
+      console.error(error);
       toast.error("Error deleting user");
     }
   };
