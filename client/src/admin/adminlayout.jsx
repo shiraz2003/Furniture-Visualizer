@@ -15,14 +15,11 @@ const AdminLayout = () => {
   const location = useLocation();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-  // --- Login තොරතුරු ලබා ගැනීම ---
-  // setUserData පාවිච්චි නොකරන නිසා එය ඉවත් කළා (ESLint warning එක මඟ හැරීමට)
   const [userData] = useState({
     name: localStorage.getItem('userName') || 'Adithya Semina',
     role: localStorage.getItem('userRole') || 'Admin'
   });
 
-  // නමේ මුලකුරු ලබා ගැනීමට (උදා: Adithya Semina -> AS)
   const getInitials = (name) => {
     if (!name) return "AD";
     return name
