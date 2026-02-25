@@ -106,8 +106,8 @@ const AdminLayout = () => {
 
           <div className="flex items-center gap-3">
              <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-slate-800 leading-none">Admin</p>
-                <p className="text-[10px] text-slate-500 mt-1 uppercase">Manager</p>
+                <p className="text-sm font-bold text-slate-800 leading-none">Adithya Semina</p>
+                <p className="text-[10px] text-slate-500 mt-1 uppercase">Admin</p>
              </div>
              <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold">AD</div>
           </div>

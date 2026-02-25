@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 
 const Users = () => {
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false); // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   
@@ -26,14 +26,12 @@ const Users = () => {
     });
   };
 
-  // Step 1: Open Confirmation instead of direct adding
   const handleSubmitClick = (e) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) return toast.error("Passwords do not match!");
     setShowConfirmModal(true);
   };
 
-  // Step 2: Finalizing addition after confirmation
   const handleAddUser = () => {
     const newUser = {
       id: Date.now(),
@@ -56,7 +54,7 @@ const Users = () => {
   };
 
   return (
-    <div className="relative min-h-full pb-24 lg:pb-0">
+    <div className="relative min-h-full pb-24 lg:pb-0 animate-in fade-in duration-500">
       {/* --- Header Section --- */}
       <div className="flex justify-between items-center mb-6 sm:mb-10">
         <div>
@@ -80,22 +78,31 @@ const Users = () => {
         <HiPlus size={28} />
       </button>
 
-      {/* 1. Desktop Table View */}
+      {/* 1. Desktop Table View - Layout matched with Items table */}
       <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50/50 border-b border-slate-200">
             <tr>
               <th className="p-4 text-sm font-semibold text-slate-600">User</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">Email</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">Added Date</th>
+              <th className="p-4 text-sm font-semibold text-slate-600">Email Address</th>
+              <th className="p-4 text-sm font-semibold text-slate-600">Registration Date</th>
               <th className="p-4 text-sm font-semibold text-slate-600 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {users.map(user => (
               <tr key={user.id} className="hover:bg-slate-50/40 transition-colors">
-                <td className="p-4 text-sm font-medium text-slate-700">{user.name}</td>
-                <td className="p-4 text-sm text-slate-500">{user.email}</td>
+                <td className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                      <HiOutlineUser size={20} />
+                    </div>
+                    <span className="text-sm font-bold text-slate-700">{user.name}</span>
+                  </div>
+                </td>
+                <td className="p-4">
+                  <span className="text-sm text-slate-500 font-medium">{user.email}</span>
+                </td>
                 <td className="p-4">
                   <div className="flex items-center text-slate-500 text-sm">
                     <HiOutlineClock className="mr-2 text-indigo-400" />
@@ -146,26 +153,39 @@ const Users = () => {
         ))}
       </div>
 
-      {/* --- ADD MODAL --- */}
+      {/* --- ADD MODAL (Items style updated) --- */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}></div>
-          <div className="relative bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in duration-300">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100">
+          <form onSubmit={handleSubmitClick} className="relative bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-bold text-slate-800">Create New Account</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><HiOutlineX size={20} /></button>
+              <button type="button" onClick={() => setShowAddModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><HiOutlineX size={20} /></button>
             </div>
-            <form onSubmit={handleSubmitClick} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input type="text" name="firstname" required placeholder="First Name" onChange={handleInputChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
-                <input type="text" name="lastname" required placeholder="Last Name" onChange={handleInputChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
+            
+            <div className="p-8 space-y-6">
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Personal Details</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <input type="text" name="firstname" required placeholder="First Name" onChange={handleInputChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
+                  <input type="text" name="lastname" required placeholder="Last Name" onChange={handleInputChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
+                </div>
+                <input type="email" name="email" required placeholder="Email Address" onChange={handleInputChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
               </div>
-              <input type="email" name="email" required placeholder="Email Address" onChange={handleInputChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
-              <input type="password" name="password" required placeholder="Password" onChange={handleInputChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
-              <input type="password" name="confirmPassword" required placeholder="Confirm Password" onChange={handleInputChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
-              <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-colors">Create User</button>
-            </form>
-          </div>
+
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Security</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <input type="password" name="password" required placeholder="Password" onChange={handleInputChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
+                  <input type="password" name="confirmPassword" required placeholder="Confirm Password" onChange={handleInputChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" />
+                </div>
+              </div>
+
+              <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all mt-4 active:scale-95">
+                Create User Account
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -175,7 +195,7 @@ const Users = () => {
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)}></div>
           <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center animate-in zoom-in duration-200 shadow-2xl">
             <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <HiOutlineUserAdd size={32} />
+              <HiPlus size={32} />
             </div>
             <h3 className="text-lg font-bold text-slate-800">Confirm Creation</h3>
             <p className="text-slate-500 my-3 text-sm">Create a new system account for <b>{formData.firstname}</b>?</p>
