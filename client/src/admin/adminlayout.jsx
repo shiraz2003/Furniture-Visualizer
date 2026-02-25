@@ -5,7 +5,6 @@ import {
   HiOutlineUsers, 
   HiOutlineCube, 
   HiOutlineLogout,
-  HiOutlineSearch,
   HiMenuAlt2,
   HiX 
 } from 'react-icons/hi';
@@ -16,6 +15,23 @@ const AdminLayout = () => {
   const location = useLocation();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
+  // --- Login තොරතුරු ලබා ගැනීම ---
+  // setUserData පාවිච්චි නොකරන නිසා එය ඉවත් කළා (ESLint warning එක මඟ හැරීමට)
+  const [userData] = useState({
+    name: localStorage.getItem('userName') || 'Adithya Semina',
+    role: localStorage.getItem('userRole') || 'Admin'
+  });
+
+  // නමේ මුලකුරු ලබා ගැනීමට (උදා: Adithya Semina -> AS)
+  const getInitials = (name) => {
+    if (!name) return "AD";
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -29,6 +45,8 @@ const AdminLayout = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
     toast.success("Logged out!");
     navigate('/login');
   };
@@ -65,7 +83,6 @@ const AdminLayout = () => {
             </div>
             {isSidebarOpen && <span className="text-xl font-bold text-slate-800 tracking-tight">Visualizer<span className="text-indigo-600">.</span></span>}
           </div>
-          {/* Mobile Close Button */}
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 text-slate-500"><HiX size={24}/></button>
         </div>
 
@@ -106,10 +123,14 @@ const AdminLayout = () => {
 
           <div className="flex items-center gap-3">
              <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-slate-800 leading-none">Adithya Semina</p>
-                <p className="text-[10px] text-slate-500 mt-1 uppercase">Admin</p>
+                {/* Dynamic Name and Role */}
+                <p className="text-sm font-bold text-slate-800 leading-none">{userData.name}</p>
+                <p className="text-[10px] text-slate-500 mt-1 uppercase">{userData.role}</p>
              </div>
-             <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold">AD</div>
+             {/* Dynamic Avatar Initials */}
+             <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold">
+                {getInitials(userData.name)}
+             </div>
           </div>
         </header>
 
@@ -119,7 +140,6 @@ const AdminLayout = () => {
             <Outlet />
           </div>
         </main>
-
       </div>
     </div>
   );
