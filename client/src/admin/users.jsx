@@ -16,12 +16,9 @@ const Users = () => {
     firstname: '', lastname: '', email: '', password: '', confirmPassword: ''
   });
 
-  // --- Backend එකෙන් Usersලා ලබා ගැනීම ---
   const fetchUsers = async () => {
     try {
-      // ඔබේ API URL එක මෙතනට දාන්න
       const response = await axios.get('http://localhost:5000/api/admin/users');
-      // Backend එකෙන් එන data format එක අනුව සකස් කිරීම
       const formattedUsers = response.data.map(u => ({
         id: u._id,
         name: `${u.firstname} ${u.lastname}`,
@@ -46,13 +43,12 @@ const Users = () => {
     setShowConfirmModal(true);
   };
 
-  // --- Backend එකට User ඇතුළත් කිරීම ---
   const handleAddUser = async () => {
     setLoading(true);
     try {
       await axios.post('http://localhost:5000/api/admin/users', formData);
       toast.success("User added successfully!");
-      fetchUsers(); // List එක update කරන්න
+      fetchUsers(); 
       setShowConfirmModal(false);
       setShowAddModal(false);
       setFormData({ firstname: '', lastname: '', email: '', password: '', confirmPassword: '' });
@@ -63,7 +59,6 @@ const Users = () => {
     }
   };
 
-  // --- Backend එකෙන් User ඉවත් කිරීම ---
   const handleDelete = async () => {
     try {
       await axios.delete(`http://localhost:5000/api/admin/users/${userToDelete.id}`);

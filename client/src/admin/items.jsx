@@ -3,7 +3,7 @@ import {
   HiPlus, HiOutlineTrash, HiOutlineX, 
   HiOutlineUpload, HiOutlinePhotograph, HiOutlineExclamationCircle, HiOutlineTag,
   HiOutlinePencilAlt,
-  HiOutlineSearch // Search icon එක එකතු කළා
+  HiOutlineSearch 
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 

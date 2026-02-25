@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // useState එකතු කළා
+import React, { useState } from 'react'; 
 import { 
   HiOutlineUsers, 
   HiOutlineCube, 
@@ -6,7 +6,6 @@ import {
 } from 'react-icons/hi';
 
 const AdminDashboard = () => {
-  // පරීක්ෂා කිරීම සඳහා Dummy Data (Items 8ක්)
   const items = [
     { id: 1, name: "Modern Sofa", category: "Living Room" },
     { id: 2, name: "Office Chair", category: "Office" },
@@ -18,7 +17,7 @@ const AdminDashboard = () => {
     { id: 8, name: "Bar Stool", category: "Kitchen" }
   ];
 
-  // View All click කරාද නැද්ද කියලා බලාගන්න state එකක්
+
   const [showAll, setShowAll] = useState(false);
 
   // Stats data array
@@ -39,7 +38,7 @@ const AdminDashboard = () => {
     },
   ];
 
-  // showAll true නම් සියල්ල පෙන්වනවා, නැත්නම් මුල් 4 විතරයි
+
   const displayItems = showAll ? [...items].reverse() : [...items].reverse().slice(0, 3);
 
   return (
@@ -83,7 +82,7 @@ const AdminDashboard = () => {
               Recent Updates
             </h3>
             <button 
-              onClick={() => setShowAll(!showAll)} // Click කළ විට state එක මාරු වෙනවා
+              onClick={() => setShowAll(!showAll)}
               className="text-indigo-600 text-xs font-bold hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
             >
               {showAll ? 'Show Less' : 'View All'} 
@@ -96,7 +95,6 @@ const AdminDashboard = () => {
                 {/* Timeline Dot & Line */}
                 <div className="flex flex-col items-center shrink-0">
                   <div className="w-3 h-3 rounded-full bg-indigo-500 ring-4 ring-indigo-50 group-hover:bg-indigo-600 transition-colors"></div>
-                  {/* අයිතම ලැයිස්තුවේ අවසන් එකට යටින් ඉරක් නොදමයි */}
                   {index !== displayItems.length - 1 && <div className="w-0.5 h-12 bg-slate-100 mt-2"></div>}
                 </div>
                 

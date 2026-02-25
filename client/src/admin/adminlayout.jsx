@@ -14,9 +14,9 @@ import toast from 'react-hot-toast';
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isSidebarOpen, setSidebarOpen] = useState(false); // Mobile වලදී මුලින් වහලා තියන්න
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-  // Screen එක ලොකු වෙනකොට sidebar එක පෙන්වන්න
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) setSidebarOpen(true);
@@ -113,7 +113,7 @@ const AdminLayout = () => {
           </div>
         </header>
 
-        {/* Page Content - මෙතන තමයි වැදගත්ම තැන */}
+        {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-10 relative"> 
           <div className="max-w-7xl mx-auto">
             <Outlet />
