@@ -85,7 +85,7 @@ const AdminLayout = () => {
           ))}
         </nav>
 
-        <div className="p-6 border-t">
+        <div className="p-6">
           <button onClick={handleLogout} className={`flex items-center w-full px-4 py-3 text-slate-500 hover:text-red-600 rounded-xl ${!isSidebarOpen && 'lg:justify-center'}`}>
             <HiOutlineLogout size={22} />
             {isSidebarOpen && <span className="ml-3.5 font-medium">Logout</span>}
