@@ -16,6 +16,17 @@ const Users = () => {
     firstname: '', lastname: '', email: '', password: '', confirmPassword: ''
   });
 
+  const currentUserName = localStorage.getItem('userName');
+
+  const getInitials = (name) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   const fetchUsers = async () => {
     try {
       const response = await axios.get('http://localhost:5000/api/admin/users');
@@ -23,9 +34,19 @@ const Users = () => {
         id: u._id,
         name: `${u.firstname} ${u.lastname}`,
         email: u.email,
+        role: u.role, 
         addedTime: new Date(u.createdAt).toLocaleString()
       }));
-      setUsers(formattedUsers);
+
+      const sortedUsers = formattedUsers.sort((a, b) => {
+        if (a.name === currentUserName) return -1;
+        if (b.name === currentUserName) return 1;
+        if (a.role === 'admin' && b.role !== 'admin') return -1;
+        if (a.role !== 'admin' && b.role === 'admin') return 1;
+        return 0;
+      });
+
+      setUsers(sortedUsers);
     } catch (error) {
       console.error(error);
       toast.error("Failed to load users");
@@ -114,10 +135,17 @@ const Users = () => {
               <tr key={user.id} className="hover:bg-slate-50/40 transition-colors">
                 <td className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                      <HiOutlineUser size={20} />
+                    <div className={`w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0 font-bold text-sm`}>
+                      {getInitials(user.name)}
                     </div>
-                    <span className="text-sm font-bold text-slate-700">{user.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${user.role === 'admin' ? 'text-black' : 'text-slate-700'}`}>{user.name}</span>
+                      {user.name === currentUserName ? (
+                        <span className="text-[10px] bg-green-500 mt-1 text-white px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-tighter">You</span>
+                      ) : user.role === 'admin' ? (
+                        <span className="text-[10px] bg-indigo-600 mt-1 text-white px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-tighter">Admin</span>
+                      ) : null}
+                    </div>
                   </div>
                 </td>
                 <td className="p-4">
@@ -131,8 +159,9 @@ const Users = () => {
                 </td>
                 <td className="p-4 text-center">
                   <button 
+                    disabled={user.role === 'admin'}
                     onClick={() => { setUserToDelete(user); setShowDeleteModal(true); }}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                    className={`p-2 rounded-lg transition-all ${user.role === 'admin' ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}
                   >
                     <HiOutlineTrash size={18} />
                   </button>
@@ -153,19 +182,27 @@ const Users = () => {
           <div key={user.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center">
-                  <HiOutlineUser size={20}/>
+                <div className={`w-10 h-10 bg-indigo-50  text-indigo-600 rounded-full flex items-center justify-center font-bold text-sm`}>
+                  {getInitials(user.name)}
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-800">{user.name}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className={`font-bold ${user.role === 'admin' ? 'text-black' : 'text-slate-800'}`}>{user.name}</h4>
+                    {user.name === currentUserName ? (
+                      <span className="text-[9px] bg-green-500 text-white px-1 py-0.5 rounded font-semibold uppercase tracking-tighter">You</span>
+                    ) : user.role === 'admin' ? (
+                      <span className="text-[9px] bg-indigo-600 text-white px-1 py-0.5 rounded font-seminbold uppercase tracking-tighter">Admin</span>
+                    ) : null}
+                  </div>
                   <div className="flex items-center text-xs text-slate-500 gap-1">
                     <HiOutlineMail /> {user.email}
                   </div>
                 </div>
               </div>
               <button 
+                disabled={user.role === 'admin'}
                 onClick={() => { setUserToDelete(user); setShowDeleteModal(true); }}
-                className="p-2 text-red-500 bg-red-50 rounded-lg"
+                className={`p-2 rounded-lg ${user.role === 'admin' ? 'text-slate-200' : 'text-red-500 bg-red-50'}`}
               >
                 <HiOutlineTrash size={18} />
               </button>
@@ -177,7 +214,7 @@ const Users = () => {
         ))}
       </div>
 
-      {/* --- MODALS (Same as before but linked to API) --- */}
+      {/* --- MODALS --- */}
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}></div>
