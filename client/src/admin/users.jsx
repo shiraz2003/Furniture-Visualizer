@@ -125,8 +125,6 @@ const Users = () => {
                       <span className={`text-sm font-bold ${user.role === 'admin' ? 'text-black' : 'text-slate-700'}`}>{user.name}</span>
                       {user.name === currentUserName ? (
                         <span className="text-[10px] bg-green-500 mt-1 text-white px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-tighter">You</span>
-                      ) : user.role === 'admin' ? (
-                        <span className="text-[10px] bg-indigo-600 mt-1 text-white px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-tighter">Admin</span>
                       ) : null}
                     </div>
                   </div>

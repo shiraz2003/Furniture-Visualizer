@@ -22,7 +22,6 @@ const Items = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [items, setItems] = useState([]);
 
-  // Editing සඳහා නව States
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
 
@@ -58,7 +57,6 @@ const Items = () => {
     if (file) setFormData({ ...formData, glbFile: file });
   };
 
-  // Edit Button එක ක්ලික් කළ විට ක්‍රියාත්මක වේ
   const handleEditClick = (item) => {
     setIsEditing(true);
     setEditId(item._id);
@@ -67,8 +65,8 @@ const Items = () => {
       category: item.category,
       description: item.description,
       price: item.price,
-      image: item.image, // පවතින image URL එක
-      glbFile: null // අලුතින් upload කරනවා නම් පමණක් පිරවේ
+      image: item.image,
+      glbFile: null 
     });
     setPreviewImage(item.image);
     setShowAddModal(true);
@@ -85,8 +83,6 @@ const Items = () => {
     setLoading(true);
     try {
       let finalImageUrl = formData.image;
-      
-      // නව පින්තූරයක් තෝරා ඇත්නම් පමණක් upload කරයි
       if (formData.image instanceof File) {
         finalImageUrl = await MediaUpload(formData.image);
       }
@@ -97,10 +93,7 @@ const Items = () => {
       data.append("description", formData.description);
       data.append("price", formData.price);
       data.append("image", finalImageUrl);
-      
-      if (formData.glbFile) {
-        data.append("glbFile", formData.glbFile);
-      }
+      if (formData.glbFile) data.append("glbFile", formData.glbFile);
 
       if (isEditing) {
         await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/furniture/update/${editId}`, data);
@@ -147,6 +140,7 @@ const Items = () => {
 
   return (
     <div className="relative min-h-full pb-24 lg:pb-0 animate-in fade-in duration-500">
+      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 sm:mb-10">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Furniture Items</h2>
@@ -157,12 +151,21 @@ const Items = () => {
             <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input type="text" placeholder="Search items..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all shadow-sm" />
           </div>
-          <button onClick={() => { resetForm(); setShowAddModal(true); }} className="hidden md:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg font-medium shrink-0">
+          <button onClick={() => { resetForm(); setShowAddModal(true); }} className="hidden md:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl shadow-lg font-medium shrink-0">
             <HiPlus size={20} /> Add New Item
           </button>
         </div>
       </div>
 
+      {/* --- Mobile FAB (Floating Action Button) --- */}
+      <button 
+        onClick={() => { resetForm(); setShowAddModal(true); }}
+        className="md:hidden fixed bottom-24 right-6 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform border-2 border-white"
+      >
+        <HiPlus size={28} />
+      </button>
+
+      {/* --- Desktop View (Table) --- */}
       <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50/50 border-b border-slate-200">
@@ -188,18 +191,40 @@ const Items = () => {
                 </td>
                 <td className="p-4 text-center">
                   <div className="flex items-center justify-center gap-2">
-                    <button onClick={() => handleEditClick(item)} className="p-2 text-slate-400 hover:text-indigo-600 transition-all">
-                      <HiOutlinePencilAlt size={18} />
-                    </button>
-                    <button onClick={() => { setItemToDelete(item); setShowDeleteModal(true); }} className="p-2 text-slate-400 hover:text-red-600 transition-all">
-                      <HiOutlineTrash size={18} />
-                    </button>
+                    <button onClick={() => handleEditClick(item)} className="p-2 text-slate-400 hover:text-indigo-600 transition-all"><HiOutlinePencilAlt size={18} /></button>
+                    <button onClick={() => { setItemToDelete(item); setShowDeleteModal(true); }} className="p-2 text-slate-400 hover:text-red-600 transition-all"><HiOutlineTrash size={18} /></button>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* --- Mobile View (Cards) --- */}
+      <div className="grid grid-cols-1 gap-4 md:hidden">
+        {filteredItems.map(item => (
+          <div key={item._id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center shrink-0">
+                  {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <HiOutlinePhotograph size={24} />}
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800">{item.name}</h4>
+                  <div className="flex items-center text-[10px] text-indigo-600 font-bold uppercase gap-1">
+                    <HiOutlineTag /> {item.category}
+                  </div>
+                  <p className="text-sm font-bold text-slate-700 mt-1">Rs. {item.price}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleEditClick(item)} className="p-2 text-indigo-500 bg-indigo-50 rounded-lg"><HiOutlinePencilAlt size={18} /></button>
+                <button onClick={() => { setItemToDelete(item); setShowDeleteModal(true); }} className="p-2 text-red-500 bg-red-50 rounded-lg"><HiOutlineTrash size={18} /></button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Add / Edit Modal */}
