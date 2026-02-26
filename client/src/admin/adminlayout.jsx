@@ -8,7 +8,8 @@ import {
   HiMenuAlt2,
   HiX,
   HiOutlineExclamationCircle,
-  HiOutlineClipboardList
+  HiOutlineClipboardList,
+  HiOutlineColorSwatch
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
@@ -57,7 +58,8 @@ const AdminLayout = () => {
     { name: 'Dashboard', path: '/admin', icon: <HiOutlineHome size={22}/> },
     { name: 'Users', path: '/admin/users', icon: <HiOutlineUsers size={22}/> },
     { name: 'Items', path: '/admin/items', icon: <HiOutlineCube size={22}/> },
-    { name: 'Requests', path: '/admin/requests', icon: <HiOutlineClipboardList size={22}/> }
+    { name: 'Requests', path: '/admin/requests', icon: <HiOutlineClipboardList size={22}/> },
+    { name: 'Design', path: '/admin/design', icon: <HiOutlineColorSwatch size={22}/> }
   ];
 
   return (

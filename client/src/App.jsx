@@ -11,6 +11,7 @@ import AdminDashboard from './admin/dashboard.jsx';
 import Users from './admin/users';
 import Items from './admin/items.jsx';
 import Requests from './admin/requests.jsx';
+import DesignWorkspace from './admin/design.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 import Registration from './pages/registrationPage.jsx';
@@ -31,6 +32,7 @@ function App() {
           <Route path="users" element={<Users />} />
           <Route path="items" element={<Items />} />
           <Route path="requests" element={<Requests />} />
+          <Route path="design" element={<DesignWorkspace />} />
         </Route>
 
         {/* User Section - Protected */}
