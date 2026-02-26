@@ -17,6 +17,9 @@ export default function LoginPage() {
             const response = await axios.post(import.meta.env.VITE_BACKEND_URL+"/api/auth/login", { email, password });
             console.log(response.data);
             localStorage.setItem("token", response.data.token);
+            const fullName = `${response.data.user.firstname} ${response.data.user.lastname}`;
+            localStorage.setItem("userName", fullName);
+            localStorage.setItem("userRole", response.data.user.role);
             toast.success("Login successful!");
 
             if (response.data.role === 'admin') {
