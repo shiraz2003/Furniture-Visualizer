@@ -1,15 +1,33 @@
-import React, { useState } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { HiOutlineMenuAlt2, HiOutlineHome, HiOutlineUsers, HiOutlineCube, HiOutlineLogout } from 'react-icons/hi';
 
 const AdminLayout = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const navigate = useNavigate();
+
+  // Additional security check within the component
+  useEffect(() => {
+    const userRole = localStorage.getItem('userRole');
+    const token = localStorage.getItem('token');
+    
+    if (!token || userRole !== 'admin') {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const menuItems = [
     { name: 'Dashboard', icon: <HiOutlineHome size={22}/>, path: '/admin' },
     { name: 'Users', icon: <HiOutlineUsers size={22}/>, path: '/admin/users' },
     { name: 'Projects', icon: <HiOutlineCube size={22}/>, path: '/admin/projects' },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
+    navigate('/login');
+  };
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
@@ -30,7 +48,10 @@ const AdminLayout = () => {
         </nav>
 
         <div className="p-4 border-t border-gray-100">
-          <button className="flex items-center w-full p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center w-full p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+          >
             <HiOutlineLogout size={22}/>
             {isSidebarOpen && <span className="ml-4 font-medium">Logout</span>}
           </button>
