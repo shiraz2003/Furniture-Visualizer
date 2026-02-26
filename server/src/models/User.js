@@ -29,3 +29,13 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 
 export default User;
+
+/*
+{
+  "firstname": "Admin",
+  "lastname": "User",
+  "email": "admin@furniture-visualizer.com",
+  "password": "Admin123!",
+  "role": "admin"
+}
+*/
