@@ -2,7 +2,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { addFurniture, getFurniture, deleteFurniture } from "../../controllers/admin/furniturecontroller.js";
+import { addFurniture, getFurniture, deleteFurniture, updateFurniture } from "../../controllers/admin/furniturecontroller.js";
 
 const router = express.Router();
 
@@ -37,6 +37,7 @@ const upload = multer({
 // API Routes
 router.post("/add", upload.single("glbFile"), addFurniture);
 router.get("/all", getFurniture);
-router.delete("/delete/:id", deleteFurniture); // මකා දැමීමේ route එක
+router.delete("/delete/:id", deleteFurniture); 
+router.put("/update/:id", upload.single("glbFile"), updateFurniture);
 
 export default router;

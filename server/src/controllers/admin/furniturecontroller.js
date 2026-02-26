@@ -59,3 +59,42 @@ export const deleteFurniture = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+// භාණ්ඩයක් යාවත්කාලීන කිරීම (Update)
+export const updateFurniture = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, description, price, image } = req.body;
+    
+    const item = await Furniture.findById(id);
+    if (!item) return res.status(404).json({ message: "Item not found" });
+
+    let model3DUrl = item.model3DUrl;
+
+    // නව GLB ෆයිල් එකක් ඇත්නම් පැරණි එක මකා දමන්න
+    if (req.file) {
+      if (fs.existsSync(item.model3DUrl)) {
+        fs.unlinkSync(item.model3DUrl);
+      }
+      model3DUrl = req.file.path;
+    }
+
+    const updatedItem = await Furniture.findByIdAndUpdate(
+      id,
+      {
+        name,
+        category,
+        description,
+        price: Number(price),
+        image, // Frontend එකෙන් එවන පවතින URL හෝ නව Supabase URL
+        model3DUrl
+      },
+      { new: true }
+    );
+
+    res.status(200).json({ message: "Item updated successfully!", data: updatedItem });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
