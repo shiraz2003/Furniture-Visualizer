@@ -9,38 +9,33 @@ import {
 import axios from 'axios'; 
 
 const AdminDashboard = () => {
-  // --- පවතින Items Array එක ---
-  const items = [
-    { id: 1, name: "Modern Sofa", category: "Living Room" },
-    { id: 2, name: "Office Chair", category: "Office" },
-    { id: 3, name: "Wooden Table", category: "Kitchen" },
-    { id: 4, name: "Minimalist Chair", category: "Living Room" },
-    { id: 5, name: "Luxury Bed", category: "Bedroom" },
-    { id: 6, name: "Gaming Desk", category: "Office" },
-    { id: 7, name: "Dining Set", category: "Kitchen" },
-    { id: 8, name: "Bar Stool", category: "Kitchen" }
-  ];
-
   const [showAll, setShowAll] = useState(false);
   
-  // --- අලුතින් එක් කළ State එක (Users ගණන සඳහා) ---
+  // --- States එක් කළා ---
   const [userCount, setUserCount] = useState('...'); 
+  const [items, setItems] = useState([]); // Items array එක state එකක් ලෙස
 
-  // --- Backend එකෙන් ඇත්තම Usersලා ගණන ලබා ගැනීම ---
+  // --- Backend එකෙන් දත්ත ලබා ගැනීම ---
   useEffect(() => {
-    const fetchUserCount = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/admin/users');
-        setUserCount(response.data.length.toString());
+        // Users ගණන ලබා ගැනීම
+        const userRes = await axios.get('http://localhost:5000/api/admin/users');
+        setUserCount(userRes.data.length.toString());
+
+        // Items ගණන ලබා ගැනීම
+        const itemRes = await axios.get('http://localhost:5000/api/furniture/all');
+        setItems(itemRes.data);
       } catch (error) {
-        console.error("Error fetching user count:", error);
-        setUserCount('0'); 
+        console.error("Error fetching dashboard data:", error);
+        setUserCount('0');
+        setItems([]);
       }
     };
-    fetchUserCount();
+    fetchDashboardData();
   }, []);
 
-  // Stats data array (Card හතර මෙතැනට එක් කර ඇත)
+  // Stats data array
   const stats = [
     { 
       label: 'Total Users', 
@@ -51,21 +46,21 @@ const AdminDashboard = () => {
     },
     { 
       label: 'Total Items', 
-      value: items.length.toString(), 
+      value: items.length.toString(), // මෙතැන දැන් සැබෑ items ගණන පෙන්වයි
       icon: <HiOutlineCube size={28} />, 
       color: 'from-violet-600 to-purple-600',
       shadow: 'shadow-purple-100'
     },
     { 
       label: 'Pending Req', 
-      value: '12', // Static අගයක් දමා ඇත
+      value: '12', 
       icon: <HiOutlineClipboardList size={28} />, 
       color: 'from-amber-500 to-orange-600',
       shadow: 'shadow-orange-100'
     },
     { 
       label: 'Complete Req', 
-      value: '45', // Static අගයක් දමා ඇත
+      value: '45', 
       icon: <HiOutlineCheckCircle size={28} />, 
       color: 'from-emerald-500 to-teal-600',
       shadow: 'shadow-teal-100'
@@ -82,7 +77,7 @@ const AdminDashboard = () => {
         <p className="text-slate-500 text-xs sm:text-sm mt-1">Welcome back! Here's what's happening today.</p>
       </div>
 
-      {/* Stats Grid - Card හතරට ගැළපෙන සේ grid එක සකසා ඇත */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10">
         {stats.map((stat, index) => (
           <div 
@@ -106,7 +101,7 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Recent Updates Section - Full Width */}
+      {/* Recent Updates Section */}
       <div className="w-full">
         <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 p-6 sm:p-8">
           <div className="flex justify-between items-center mb-8">
@@ -123,9 +118,8 @@ const AdminDashboard = () => {
           </div>
           
           <div className="space-y-6">
-            {displayItems.map((item, index) => (
-              <div key={item.id} className="flex gap-5 items-start group animate-in slide-in-from-top-2 duration-300">
-                {/* Timeline Dot & Line */}
+            {displayItems.length > 0 ? displayItems.map((item, index) => (
+              <div key={item._id || item.id} className="flex gap-5 items-start group animate-in slide-in-from-top-2 duration-300">
                 <div className="flex flex-col items-center shrink-0">
                   <div className="w-3 h-3 rounded-full bg-indigo-500 ring-4 ring-indigo-50 group-hover:bg-indigo-600 transition-colors"></div>
                   {index !== displayItems.length - 1 && <div className="w-0.5 h-12 bg-slate-100 mt-2"></div>}
@@ -143,7 +137,9 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="text-center text-slate-400 text-sm py-4">No items available.</p>
+            )}
           </div>
         </div>
       </div>
