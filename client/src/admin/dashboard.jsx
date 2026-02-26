@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react'; // useEffect එක් කළා
+import React, { useState, useEffect } from 'react'; 
 import { 
   HiOutlineUsers, 
   HiOutlineCube, 
-  HiOutlineClock 
+  HiOutlineClock,
+  HiOutlineClipboardList,
+  HiOutlineCheckCircle
 } from 'react-icons/hi';
-import axios from 'axios'; // axios එක් කළා
+import axios from 'axios'; 
 
 const AdminDashboard = () => {
   // --- පවතින Items Array එක ---
@@ -32,17 +34,17 @@ const AdminDashboard = () => {
         setUserCount(response.data.length.toString());
       } catch (error) {
         console.error("Error fetching user count:", error);
-        setUserCount('0'); // Error එකක් ආවොත් 0 පෙන්වන්න
+        setUserCount('0'); 
       }
     };
     fetchUserCount();
   }, []);
 
-  // Stats data array (Value එක දැන් Dynamic වේ)
+  // Stats data array (Card හතර මෙතැනට එක් කර ඇත)
   const stats = [
     { 
       label: 'Total Users', 
-      value: userCount, // මෙතනට userCount ලබා දුන්නා
+      value: userCount, 
       icon: <HiOutlineUsers size={28} />, 
       color: 'from-blue-600 to-indigo-600',
       shadow: 'shadow-blue-100'
@@ -53,6 +55,20 @@ const AdminDashboard = () => {
       icon: <HiOutlineCube size={28} />, 
       color: 'from-violet-600 to-purple-600',
       shadow: 'shadow-purple-100'
+    },
+    { 
+      label: 'Pending Req', 
+      value: '12', // Static අගයක් දමා ඇත
+      icon: <HiOutlineClipboardList size={28} />, 
+      color: 'from-amber-500 to-orange-600',
+      shadow: 'shadow-orange-100'
+    },
+    { 
+      label: 'Complete Req', 
+      value: '45', // Static අගයක් දමා ඇත
+      icon: <HiOutlineCheckCircle size={28} />, 
+      color: 'from-emerald-500 to-teal-600',
+      shadow: 'shadow-teal-100'
     },
   ];
 
@@ -66,8 +82,8 @@ const AdminDashboard = () => {
         <p className="text-slate-500 text-xs sm:text-sm mt-1">Welcome back! Here's what's happening today.</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 mb-10">
+      {/* Stats Grid - Card හතරට ගැළපෙන සේ grid එක සකසා ඇත */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10">
         {stats.map((stat, index) => (
           <div 
             key={index} 

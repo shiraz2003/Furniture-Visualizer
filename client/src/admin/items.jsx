@@ -1,33 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  HiPlus, HiOutlineTrash, HiOutlineX, 
-  HiOutlineUpload, HiOutlinePhotograph, HiOutlineExclamationCircle, HiOutlineTag,
-  HiOutlinePencilAlt,
-  HiOutlineSearch 
+  HiPlus, HiOutlineTrash, HiOutlineX, HiOutlineUpload, 
+  HiOutlinePhotograph, HiOutlineExclamationCircle, HiOutlineTag,
+  HiOutlineSearch, HiOutlineCube 
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
+import axios from 'axios';
+import MediaUpload from '../utils/mediaupload';
 
 const Items = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false); // පාවිච්චි කළා
   const [itemToDelete, setItemToDelete] = useState(null);
-  
-  // Search State
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [items, setItems] = useState([]);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState(null);
-
-  const [items, setItems] = useState([
-    { id: 1, name: "Modern Sofa", category: "Living Room", description: "High quality luxury sofa with premium leather finish.", image: null },
-    { id: 2, name: "Office Chair", category: "Office", description: "Ergonomic workspace chair designed for long hours.", image: null },
-  ]);
-
-  const [formData, setFormData] = useState({ name: '', category: '', description: '', image: null });
+  const [formData, setFormData] = useState({ 
+    name: '', category: '', description: '', price: '', image: null, glbFile: null 
+  });
   const [previewImage, setPreviewImage] = useState(null);
 
-  // Filter Items logic
+  const fetchItems = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/furniture/all`);
+      setItems(res.data);
+    } catch (err) { 
+      console.error(err);
+      toast.error("Failed to load items"); 
+    }
+  };
+
+  useEffect(() => { fetchItems(); }, []);
+
   const filteredItems = items.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     item.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -43,24 +49,9 @@ const Items = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({ name: '', category: '', description: '', image: null });
-    setPreviewImage(null);
-    setIsEditing(false);
-    setEditId(null);
-  };
-
-  const handleEditClick = (item) => {
-    setFormData({
-      name: item.name,
-      category: item.category,
-      description: item.description,
-      image: item.image
-    });
-    setPreviewImage(item.image);
-    setEditId(item.id);
-    setIsEditing(true);
-    setShowAddModal(true);
+  const handleGlbChange = (e) => {
+    const file = e.target.files[0];
+    if (file) setFormData({ ...formData, glbFile: file });
   };
 
   const handleSubmitClick = (e) => {
@@ -68,199 +59,150 @@ const Items = () => {
     setShowConfirmModal(true);
   };
 
-  const handleAddItem = () => {
-    if (isEditing) {
-      setItems(items.map(item => 
-        item.id === editId ? { ...item, ...formData, image: previewImage } : item
-      ));
-      toast.success("Item updated successfully!");
-    } else {
-      const newId = Date.now(); 
-      setItems([...items, { id: newId, ...formData, image: previewImage }]);
+  const handleAddItem = async () => {
+    setLoading(true);
+    try {
+      const imageUrl = await MediaUpload(formData.image);
+      const data = new FormData();
+      data.append("name", formData.name);
+      data.append("category", formData.category);
+      data.append("description", formData.description);
+      data.append("price", formData.price);
+      data.append("image", imageUrl);
+      data.append("glbFile", formData.glbFile);
+
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/furniture/add`, data);
+      
       toast.success("Item added successfully!");
+      setShowConfirmModal(false);
+      setShowAddModal(false);
+      fetchItems();
+      setPreviewImage(null);
+      setFormData({ name: '', category: '', description: '', price: '', image: null, glbFile: null });
+    } catch (error) {
+      toast.error(error.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
-    
-    setShowConfirmModal(false);
-    setShowAddModal(false);
-    resetForm();
   };
 
-  const handleDelete = () => {
-    setItems(items.filter(i => i.id !== itemToDelete.id));
-    toast.success("Item removed!");
-    setShowDeleteModal(false);
-    setItemToDelete(null);
+  const handleDelete = async () => {
+    try {
+      // මෙතැනදී ඔයාගේ delete API එකට call කරන්න පුළුවන්
+      // await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/furniture/${itemToDelete._id}`);
+      setItems(items.filter(i => i._id !== itemToDelete._id));
+      toast.success("Item removed!");
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+    } catch (error) {
+      toast.error("Error deleting item");
+    }
   };
 
   return (
     <div className="relative min-h-full pb-24 lg:pb-0 animate-in fade-in duration-500">
-      {/* --- Header Section --- */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 sm:mb-10">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Furniture Items</h2>
           <p className="text-slate-500 text-xs sm:text-sm mt-1">Manage your product catalog and inventory.</p>
         </div>
-
         <div className="flex items-center gap-3">
-          {/* --- Search Input --- */}
           <div className="relative flex-1 md:w-64">
             <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text"
-              placeholder="Search items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all shadow-sm"
-            />
+            <input type="text" placeholder="Search items..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 transition-all shadow-sm" />
           </div>
-
-          <button 
-            onClick={() => { resetForm(); setShowAddModal(true); }}
-            className="hidden md:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg font-medium shrink-0"
-          >
+          <button onClick={() => setShowAddModal(true)} className="hidden md:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg font-medium shrink-0">
             <HiPlus size={20} /> Add New Item
           </button>
         </div>
       </div>
 
-      {/* --- Mobile FAB --- */}
-      <button 
-        onClick={() => { resetForm(); setShowAddModal(true); }}
-        className="md:hidden fixed bottom-24 right-6 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] active:scale-90 transition-transform border-2 border-white"
-      >
-        <HiPlus size={28} />
-      </button>
-
-      {/* 1. Desktop Table View */}
       <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50/50 border-b border-slate-200">
             <tr>
               <th className="p-4 text-sm font-semibold text-slate-600">Product</th>
+              <th className="p-4 text-sm font-semibold text-slate-600">Price</th>
               <th className="p-4 text-sm font-semibold text-slate-600">Category</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">Description</th>
               <th className="p-4 text-sm font-semibold text-slate-600 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredItems.length > 0 ? (
-              filteredItems.map(item => (
-                <tr key={item.id} className="hover:bg-slate-50/40 transition-colors">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-slate-400">
-                        {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <HiOutlinePhotograph size={20} />}
-                      </div>
-                      <span className="text-sm font-bold text-slate-700">{item.name}</span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                      {item.category}
-                    </span>
-                  </td>
-                  <td className="p-4 text-sm text-slate-500 max-w-xs truncate">{item.description}</td>
-                  <td className="p-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => handleEditClick(item)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
-                        <HiOutlinePencilAlt size={18} />
-                      </button>
-                      <button onClick={() => { setItemToDelete(item); setShowDeleteModal(true); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
-                        <HiOutlineTrash size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="4" className="p-10 text-center text-slate-400 text-sm">No items found matching your search.</td>
+            {filteredItems.map(item => (
+              <tr key={item._id} className="hover:bg-slate-50/40 transition-colors">
+                <td className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center">
+                    {item.image ? <img src={item.image} alt={item.name} className="w-full h-full object-cover" /> : <HiOutlinePhotograph />}
+                  </div>
+                  <span className="text-sm font-bold text-slate-700">{item.name}</span>
+                </td>
+                <td className="p-4 text-sm font-bold text-slate-600">Rs. {item.price}</td>
+                <td className="p-4">
+                  <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase">{item.category}</span>
+                </td>
+                <td className="p-4 text-center">
+                   <button onClick={() => { setItemToDelete(item); setShowDeleteModal(true); }} className="p-2 text-slate-400 hover:text-red-600 transition-all"><HiOutlineTrash size={18} /></button>
+                </td>
               </tr>
-            )}
+            ))}
           </tbody>
         </table>
       </div>
 
-      {/* 2. Mobile Card View */}
-      <div className="grid grid-cols-1 gap-4 md:hidden">
-        {filteredItems.map(item => (
-          <div key={item.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center text-slate-400 shrink-0">
-                  {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <HiOutlinePhotograph size={24} />}
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800">{item.name}</h4>
-                  <div className="flex items-center text-[10px] text-indigo-600 font-bold uppercase tracking-tighter gap-1">
-                    <HiOutlineTag /> {item.category}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => handleEditClick(item)} className="p-2 text-indigo-500 bg-indigo-50 rounded-lg">
-                  <HiOutlinePencilAlt size={18} />
-                </button>
-                <button onClick={() => { setItemToDelete(item); setShowDeleteModal(true); }} className="p-2 text-red-500 bg-red-50 rounded-lg">
-                  <HiOutlineTrash size={18} />
-                </button>
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{item.description}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* --- ADD / EDIT MODAL --- */}
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}></div>
-          <form onSubmit={handleSubmitClick} className="relative bg-white w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800">{isEditing ? 'Edit Furniture Item' : 'Add New Furniture Item'}</h3>
-              <button type="button" onClick={() => setShowAddModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><HiOutlineX size={20} /></button>
+          <form onSubmit={handleSubmitClick} className="relative bg-white w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden">
+            <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800">Add New Furniture Item</h3>
+              <button type="button" onClick={() => setShowAddModal(false)} className="p-2 hover:bg-white rounded-full text-slate-400"><HiOutlineX size={20} /></button>
             </div>
-            <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Product Image</label>
-                <label className="flex flex-col items-center justify-center w-full min-h-[220px] lg:h-full lg:min-h-0 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all overflow-hidden group">
-                  {previewImage ? <img src={previewImage} className="w-full h-full object-cover" /> : (
-                    <div className="text-slate-400 flex flex-col items-center">
-                      <HiOutlineUpload size={40} className="group-hover:scale-110 transition-transform"/>
-                      <p className="text-xs mt-2 font-medium">Click to Upload Image</p>
-                    </div>
-                  )}
-                  <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} required={!previewImage && !isEditing} />
+            <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 overflow-y-auto max-h-[80vh]">
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Preview Image</label>
+                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 overflow-hidden">
+                  {previewImage ? <img src={previewImage} alt="preview" className="w-full h-full object-cover" /> : <div className="text-center"><HiOutlinePhotograph size={32} className="mx-auto text-slate-300"/><p className="text-xs text-slate-400 mt-2">Upload Image</p></div>}
+                  <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} required />
+                </label>
+
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">3D Model (.glb)</label>
+                <label className="flex items-center gap-3 p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-indigo-400 transition-all">
+                  <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><HiOutlineCube size={24}/></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-700 truncate">{formData.glbFile ? formData.glbFile.name : 'Select .glb file'}</p>
+                    <p className="text-[10px] text-slate-400 uppercase">3D Visualizer File</p>
+                  </div>
+                  <input type="file" className="hidden" accept=".glb" onChange={handleGlbChange} required />
                 </label>
               </div>
+
               <div className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Product Name</label>
-                  <input name="name" value={formData.name} type="text" required onChange={handleInputChange} className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" placeholder="e.g. Luxury Modern Sofa" />
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Product Name</label>
+                  <input name="name" type="text" required onChange={handleInputChange} className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" placeholder="e.g. Luxury Sofa" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Price (Rs.)</label>
+                    <input name="price" type="number" required onChange={handleInputChange} className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" placeholder="50000" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</label>
+                    <select name="category" required onChange={handleInputChange} className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm">
+                      <option value="">Select</option>
+                      <option value="Living Room">Living Room</option>
+                      <option value="Bedroom">Bedroom</option>
+                      <option value="Office">Office</option>
+                      <option value="Kitchen">Kitchen</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
-                    <div className="relative mt-1">
-                        <select name="category" value={formData.category} required onChange={handleInputChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm appearance-none cursor-pointer pr-10">
-                        <option value="">Select Category</option>
-                        <option value="Living Room">Living Room</option>
-                        <option value="Bedroom">Bedroom</option>
-                        <option value="Office">Office</option>
-                        <option value="Kitchen">Kitchen</option>
-                        </select>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none flex items-center">
-                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                    </div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Description</label>
+                  <textarea name="description" rows="3" required onChange={handleInputChange} className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm resize-none" placeholder="Details..." />
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
-                  <textarea name="description" value={formData.description} rows="4" required onChange={handleInputChange} className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm resize-none" placeholder="Provide detailed specifications..." />
-                </div>
-                <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all mt-2 active:scale-95">
-                  {isEditing ? 'Update Item' : 'Publish Item'}
+                <button type="submit" disabled={loading} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50">
+                  {loading ? 'Uploading...' : 'Publish Item'}
                 </button>
               </div>
             </div>
@@ -268,37 +210,34 @@ const Items = () => {
         </div>
       )}
 
-      {/* --- CONFIRM MODAL --- */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)}></div>
-          <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center animate-in zoom-in duration-200 shadow-2xl">
-            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              {isEditing ? <HiOutlinePencilAlt size={32} /> : <HiPlus size={32} />}
-            </div>
+          <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl">
+            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4"><HiOutlineUpload size={32} /></div>
             <h3 className="text-lg font-bold text-slate-800">Confirm Action</h3>
-            <p className="text-slate-500 my-3 text-sm">Are you sure you want to {isEditing ? 'update' : 'add'} <b>{formData.name}</b>?</p>
+            <p className="text-slate-500 my-3 text-sm">Are you sure you want to add this item to the catalog?</p>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium">Cancel</button>
-              <button onClick={handleAddItem} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-indigo-200">
-                {isEditing ? 'Yes, Update' : 'Yes, Add'}
+              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-3 border rounded-xl text-sm font-medium">Cancel</button>
+              <button onClick={handleAddItem} disabled={loading} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium shadow-lg">
+                {loading ? 'Processing...' : 'Yes, Add'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- DELETE MODAL --- */}
+      {/* Delete Confirmation Modal - මෙය දැන් වැඩ කරයි */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)}></div>
-          <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center animate-in zoom-in duration-200 shadow-2xl">
+          <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl">
             <HiOutlineExclamationCircle size={48} className="text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-slate-800">Confirm Removal</h3>
-            <p className="text-slate-500 my-3 text-sm">Delete <b>{itemToDelete?.name}</b> from catalog?</p>
+            <h3 className="text-lg font-bold text-slate-800">Confirm Delete</h3>
+            <p className="text-slate-500 my-3 text-sm">Delete <b>{itemToDelete?.name}</b> permanently?</p>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium">Cancel</button>
-              <button onClick={handleDelete} className="flex-1 py-3 bg-red-600 text-white rounded-xl text-sm font-medium">Delete</button>
+              <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-3 border rounded-xl text-sm font-medium">Cancel</button>
+              <button onClick={handleDelete} className="flex-1 py-3 bg-red-600 text-white rounded-xl text-sm font-medium shadow-lg">Delete</button>
             </div>
           </div>
         </div>
