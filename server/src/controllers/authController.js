@@ -24,8 +24,9 @@ export function createUser(req, res) {
         firstname: req.body.firstname,
         lastname: req.body.lastname,
         email: req.body.email,
+        phone: req.body.phone,
         password: passwordHash,
-        role: req.body.role || "user",
+        role: req.body.role || "customer",
     };
   const user = new User(userData);
   user

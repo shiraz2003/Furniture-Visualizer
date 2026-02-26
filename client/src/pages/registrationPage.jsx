@@ -104,7 +104,12 @@ export default function RegisterPage() {
                     className="w-[80%] p-3 rounded-lg text-white outline-none hover:border-2"
                 />
 
-                
+                <input
+                    onChange={(e) => setPhone(e.target.value)}
+                    type="tel"
+                    placeholder="Phone Number"
+                    className="w-[80%] p-3 rounded-lg text-white outline-none hover:border-2"
+                />
 
                 <input
                     onChange={(e) => setPassword(e.target.value)}
