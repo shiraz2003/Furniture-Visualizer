@@ -2,6 +2,7 @@ import Furniture from "../../models/admin/furnituremodel.js";
 import fs from "fs";
 import path from "path";
 
+// භාණ්ඩයක් එකතු කිරීම
 export const addFurniture = async (req, res) => {
   try {
     const { name, category, description, price, image } = req.body;
@@ -23,6 +24,7 @@ export const addFurniture = async (req, res) => {
   }
 };
 
+// සියලුම භාණ්ඩ ලබා ගැනීම
 export const getFurniture = async (req, res) => {
   try {
     const items = await Furniture.find().sort({ createdAt: -1 });
@@ -32,7 +34,7 @@ export const getFurniture = async (req, res) => {
   }
 };
 
-// --- අලුතින් එක් කළ Delete Function එක ---
+// භාණ්ඩයක් මකා දැමීම
 export const deleteFurniture = async (req, res) => {
   try {
     const { id } = req.params;
@@ -40,12 +42,16 @@ export const deleteFurniture = async (req, res) => {
     
     if (!item) return res.status(404).json({ message: "Item not found" });
 
-    // 1. Local Server එකේ තියෙන GLB ෆයිල් එක මැකීම
-    if (fs.existsSync(item.model3DUrl)) {
-      fs.unlinkSync(item.model3DUrl);
+    // 1. Local Server ෆෝල්ඩරයේ ඇති GLB ෆයිල් එක මකා දැමීම
+    if (item.model3DUrl && fs.existsSync(item.model3DUrl)) {
+      try {
+        fs.unlinkSync(item.model3DUrl);
+      } catch (err) {
+        console.error("Error deleting file from folder:", err);
+      }
     }
 
-    // 2. MongoDB දත්ත මැකීම
+    // 2. MongoDB දත්ත මකා දැමීම
     await Furniture.findByIdAndDelete(id);
 
     res.status(200).json({ message: "Item deleted successfully" });

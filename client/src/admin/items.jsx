@@ -7,11 +7,17 @@ import {
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import MediaUpload from '../utils/mediaupload';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase Client එක (Delete කිරීම සඳහා අවශ්‍ය වේ)
+const supabaseUrl = 'https://iiwyuylfnxskjqnzgynd.supabase.co';
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpd3l1eWxmbnhza2pxbnpneW5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQ1NDMsImV4cCI6MjA4NzcwMDU0M30.1_ywyumUtaMqT1751wmuskloIMEquCxpDCwNk2mMHpE";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const Items = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // පාවිච්චි කළා
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,15 +93,31 @@ const Items = () => {
   };
 
   const handleDelete = async () => {
+    setLoading(true);
     try {
-      // මෙතැනදී ඔයාගේ delete API එකට call කරන්න පුළුවන්
-      // await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/furniture/${itemToDelete._id}`);
-      setItems(items.filter(i => i._id !== itemToDelete._id));
-      toast.success("Item removed!");
+      // 1. Supabase එකෙන් Image එක මැකීම
+      if (itemToDelete.image) {
+        const urlParts = itemToDelete.image.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const { error: supabaseError } = await supabase.storage
+          .from('furniturevisualization')
+          .remove([fileName]);
+        
+        if (supabaseError) console.error("Supabase delete error:", supabaseError);
+      }
+
+      // 2. MongoDB සහ Server Folder එකෙන් මැකීම (Backend API හරහා)
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/furniture/delete/${itemToDelete._id}`);
+
+      toast.success("Item removed successfully!");
+      fetchItems();
       setShowDeleteModal(false);
       setItemToDelete(null);
     } catch (error) {
+      console.error(error);
       toast.error("Error deleting item");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -152,7 +174,7 @@ const Items = () => {
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}></div>
-          <form onSubmit={handleSubmitClick} className="relative bg-white w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden">
+          <form onSubmit={handleSubmitClick} className="relative bg-white w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-6 border-b flex justify-between items-center bg-slate-50">
               <h3 className="font-bold text-slate-800">Add New Furniture Item</h3>
               <button type="button" onClick={() => setShowAddModal(false)} className="p-2 hover:bg-white rounded-full text-slate-400"><HiOutlineX size={20} /></button>
@@ -187,13 +209,19 @@ const Items = () => {
                     <input name="price" type="number" required onChange={handleInputChange} className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm" placeholder="50000" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</label>
-                    <select name="category" required onChange={handleInputChange} className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
+                    <select 
+                      name="category" 
+                      required 
+                      onChange={handleInputChange} 
+                      className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm">
                       <option value="">Select</option>
-                      <option value="Living Room">Living Room</option>
-                      <option value="Bedroom">Bedroom</option>
-                      <option value="Office">Office</option>
-                      <option value="Kitchen">Kitchen</option>
+                      <option value="Sofa">Sofa</option>
+                      <option value="Chair">Chair</option>
+                      <option value="Desk">Desk</option>
+                      <option value="Cupboard">Cupboard</option>
+                      <option value="Table">Table</option>
+                      <option value="Bed">Bed</option>
                     </select>
                   </div>
                 </div>
@@ -201,7 +229,7 @@ const Items = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Description</label>
                   <textarea name="description" rows="3" required onChange={handleInputChange} className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm resize-none" placeholder="Details..." />
                 </div>
-                <button type="submit" disabled={loading} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50">
+                <button type="submit" disabled={loading} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all mt-2 active:scale-95">
                   {loading ? 'Uploading...' : 'Publish Item'}
                 </button>
               </div>
@@ -213,7 +241,7 @@ const Items = () => {
       {showConfirmModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)}></div>
-          <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl">
+          <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center animate-in zoom-in duration-200 shadow-2xl">
             <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4"><HiOutlineUpload size={32} /></div>
             <h3 className="text-lg font-bold text-slate-800">Confirm Action</h3>
             <p className="text-slate-500 my-3 text-sm">Are you sure you want to add this item to the catalog?</p>
@@ -227,17 +255,18 @@ const Items = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal - මෙය දැන් වැඩ කරයි */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)}></div>
-          <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl">
+          <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center animate-in zoom-in duration-200 shadow-2xl">
             <HiOutlineExclamationCircle size={48} className="text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-bold text-slate-800">Confirm Delete</h3>
             <p className="text-slate-500 my-3 text-sm">Delete <b>{itemToDelete?.name}</b> permanently?</p>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-3 border rounded-xl text-sm font-medium">Cancel</button>
-              <button onClick={handleDelete} className="flex-1 py-3 bg-red-600 text-white rounded-xl text-sm font-medium shadow-lg">Delete</button>
+              <button onClick={handleDelete} disabled={loading} className="flex-1 py-3 bg-red-600 text-white rounded-xl text-sm font-medium shadow-lg">
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>
