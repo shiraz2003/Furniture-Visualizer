@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'; 
-import { HiOutlineUserAdd, HiOutlineTrash, HiOutlineX, HiOutlineExclamationCircle, HiOutlineClock, HiPlus, HiOutlineMail, HiOutlineUser } from 'react-icons/hi';
+import { HiOutlineUserAdd, HiOutlineTrash, HiOutlineX, HiOutlineExclamationCircle, HiOutlineClock, HiPlus, HiOutlineMail, HiOutlineUser, HiOutlineSearch } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import axios from 'axios'; 
 
@@ -9,12 +9,24 @@ const Users = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(""); 
   
   const [users, setUsers] = useState([]); 
 
   const [formData, setFormData] = useState({
     firstname: '', lastname: '', email: '', password: '', confirmPassword: ''
   });
+
+  const currentUserName = localStorage.getItem('userName');
+
+  const getInitials = (name) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   const fetchUsers = async () => {
     try {
@@ -23,8 +35,10 @@ const Users = () => {
         id: u._id,
         name: `${u.firstname} ${u.lastname}`,
         email: u.email,
+        role: u.role, 
         addedTime: new Date(u.createdAt).toLocaleString()
       }));
+
       setUsers(formattedUsers);
     } catch (error) {
       console.error(error);
@@ -73,32 +87,22 @@ const Users = () => {
     }
   };
 
-  return (
-    <div className="relative min-h-full pb-24 lg:pb-0 animate-in fade-in duration-500">
-      {/* Header Section */}
-      <div className="flex justify-between items-center mb-6 sm:mb-10">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">User Management</h2>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1">Manage system access and accounts.</p>
-        </div>
+  // සෙවුම් පදයට අනුව Filter කිරීම
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    u.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="hidden md:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg font-medium"
-        >
-          <HiOutlineUserAdd size={20} /> Add New User
-        </button>
-      </div>
+  // ESLint error එක එන 'b' අයින් කර නිවැරදි කළ sorting logic එක
+  const adminUsers = filteredUsers
+    .filter(u => u.role === 'admin')
+    .sort((a) => (a.name === currentUserName ? -1 : 1));
 
-      {/* Mobile FAB */}
-      <button 
-        onClick={() => setShowAddModal(true)}
-        className="md:hidden fixed bottom-24 right-6 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] active:scale-90 transition-transform border-2 border-white"
-      >
-        <HiPlus size={28} />
-      </button>
+  const regularUsers = filteredUsers.filter(u => u.role !== 'admin');
 
-      {/* Desktop Table View */}
+  const TableComponent = ({ data, title }) => (
+    <div className="mb-10">
+      <h3 className="text-lg font-bold text-slate-700 mb-4 ml-1">{title}</h3>
       <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50/50 border-b border-slate-200">
@@ -110,14 +114,19 @@ const Users = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {users.length > 0 ? users.map(user => (
+            {data.length > 0 ? data.map(user => (
               <tr key={user.id} className="hover:bg-slate-50/40 transition-colors">
                 <td className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                      <HiOutlineUser size={20} />
+                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0 font-bold text-sm">
+                      {getInitials(user.name)}
                     </div>
-                    <span className="text-sm font-bold text-slate-700">{user.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${user.role === 'admin' ? 'text-black' : 'text-slate-700'}`}>{user.name}</span>
+                      {user.name === currentUserName ? (
+                        <span className="text-[10px] bg-green-500 mt-1 text-white px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-tighter">You</span>
+                      ) : null}
+                    </div>
                   </div>
                 </td>
                 <td className="p-4">
@@ -131,8 +140,9 @@ const Users = () => {
                 </td>
                 <td className="p-4 text-center">
                   <button 
+                    disabled={user.role === 'admin'}
                     onClick={() => { setUserToDelete(user); setShowDeleteModal(true); }}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                    className={`p-2 rounded-lg transition-all ${user.role === 'admin' ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}
                   >
                     <HiOutlineTrash size={18} />
                   </button>
@@ -140,7 +150,7 @@ const Users = () => {
               </tr>
             )) : (
                 <tr>
-                    <td colSpan="4" className="p-10 text-center text-slate-400">No users found.</td>
+                    <td colSpan="4" className="p-10 text-center text-slate-400">No {title.toLowerCase()} found.</td>
                 </tr>
             )}
           </tbody>
@@ -149,23 +159,31 @@ const Users = () => {
 
       {/* Mobile Card View */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
-        {users.map(user => (
+        {data.map(user => (
           <div key={user.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center">
-                  <HiOutlineUser size={20}/>
+                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-bold text-sm">
+                  {getInitials(user.name)}
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-800">{user.name}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className={`font-bold ${user.role === 'admin' ? 'text-black' : 'text-slate-800'}`}>{user.name}</h4>
+                    {user.name === currentUserName ? (
+                      <span className="text-[9px] bg-green-500 text-white px-1 py-0.5 rounded font-semibold uppercase tracking-tighter">You</span>
+                    ) : user.role === 'admin' ? (
+                      <span className="text-[9px] bg-indigo-600 text-white px-1 py-0.5 rounded font-semibold uppercase tracking-tighter">Admin</span>
+                    ) : null}
+                  </div>
                   <div className="flex items-center text-xs text-slate-500 gap-1">
                     <HiOutlineMail /> {user.email}
                   </div>
                 </div>
               </div>
               <button 
+                disabled={user.role === 'admin'}
                 onClick={() => { setUserToDelete(user); setShowDeleteModal(true); }}
-                className="p-2 text-red-500 bg-red-50 rounded-lg"
+                className={`p-2 rounded-lg ${user.role === 'admin' ? 'text-slate-200' : 'text-red-500 bg-red-50'}`}
               >
                 <HiOutlineTrash size={18} />
               </button>
@@ -176,8 +194,49 @@ const Users = () => {
           </div>
         ))}
       </div>
+    </div>
+  );
 
-      {/* --- MODALS (Same as before but linked to API) --- */}
+  return (
+    <div className="relative min-h-full pb-24 lg:pb-0 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-10">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">User Management</h2>
+          <p className="text-slate-500 text-xs sm:text-sm mt-1">Manage system access and accounts.</p>
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text"
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-sm transition-all shadow-sm"
+            />
+          </div>
+
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="hidden md:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg font-medium whitespace-nowrap"
+          >
+            <HiOutlineUserAdd size={20} /> Add New User
+          </button>
+        </div>
+      </div>
+
+      <button 
+        onClick={() => setShowAddModal(true)}
+        className="md:hidden fixed bottom-24 right-6 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] active:scale-90 transition-transform border-2 border-white"
+      >
+        <HiPlus size={28} />
+      </button>
+
+      <TableComponent data={adminUsers} title="Admin Accounts" />
+      <TableComponent data={regularUsers} title="User Accounts" />
+
+      {/* --- MODALS --- */}
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}></div>

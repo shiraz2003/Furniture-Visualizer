@@ -22,8 +22,8 @@ export default function LoginPage() {
             localStorage.setItem("userRole", response.data.user.role);
             toast.success("Login successful!");
 
-            if (response.data.role === 'admin') {
-                navigate("/admin/");
+            if (response.data.user.role === 'admin') {
+                navigate("/admin");
             }else {
                 navigate("/");
             }
@@ -48,8 +48,8 @@ export default function LoginPage() {
             localStorage.setItem("token", response.data.token);
             toast.success("Google login successful!");
             
-            if (response.data.role === 'admin') {
-                navigate("/admin/");
+            if (response.data.user.role === 'admin') {
+                navigate("/admin");
             } else {
                 navigate("/");
             }
