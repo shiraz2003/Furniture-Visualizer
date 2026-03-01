@@ -6,7 +6,10 @@ import {
   HiOutlineCube, 
   HiOutlineLogout,
   HiMenuAlt2,
-  HiX 
+  HiX,
+  HiOutlineExclamationCircle,
+  HiOutlineClipboardList,
+  HiOutlineColorSwatch
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
@@ -14,6 +17,7 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false); // Logout Modal state
 
   const [userData] = useState({
     name: localStorage.getItem('userName') || 'Adithya Semina',
@@ -53,7 +57,9 @@ const AdminLayout = () => {
   const menuItems = [
     { name: 'Dashboard', path: '/admin', icon: <HiOutlineHome size={22}/> },
     { name: 'Users', path: '/admin/users', icon: <HiOutlineUsers size={22}/> },
-    { name: 'Add Items', path: '/admin/items', icon: <HiOutlineCube size={22}/> },
+    { name: 'Items', path: '/admin/items', icon: <HiOutlineCube size={22}/> },
+    { name: 'Requests', path: '/admin/requests', icon: <HiOutlineClipboardList size={22}/> },
+    { name: 'Design', path: '/admin/design', icon: <HiOutlineColorSwatch size={22}/> }
   ];
 
   return (
@@ -100,7 +106,7 @@ const AdminLayout = () => {
         </nav>
 
         <div className="p-6">
-          <button onClick={handleLogout} className={`flex items-center w-full px-4 py-3 text-slate-500 hover:text-red-600 rounded-xl ${!isSidebarOpen && 'lg:justify-center'}`}>
+          <button onClick={() => setShowLogoutModal(true)} className={`flex items-center w-full px-4 py-3 text-slate-500 hover:text-red-600 rounded-xl ${!isSidebarOpen && 'lg:justify-center'}`}>
             <HiOutlineLogout size={22} />
             {isSidebarOpen && <span className="ml-3.5 font-medium">Logout</span>}
           </button>
@@ -120,11 +126,9 @@ const AdminLayout = () => {
 
           <div className="flex items-center gap-3">
              <div className="text-right hidden sm:block">
-                {/* Dynamic Name and Role */}
                 <p className="text-sm font-bold text-slate-800 leading-none">{userData.name}</p>
                 <p className="text-[10px] text-slate-500 mt-1 uppercase">{userData.role}</p>
              </div>
-             {/* Dynamic Avatar Initials */}
              <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold">
                 {getInitials(userData.name)}
              </div>
@@ -138,6 +142,22 @@ const AdminLayout = () => {
           </div>
         </main>
       </div>
+
+      {/* --- Logout Confirmation Modal --- */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowLogoutModal(false)}></div>
+          <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center animate-in zoom-in duration-200 shadow-2xl">
+            <HiOutlineExclamationCircle size={48} className="text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-slate-800">Confirm Logout</h3>
+            <p className="text-slate-500 my-3 text-sm">Are you sure you want to log out of your account?</p>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium">Cancel</button>
+              <button onClick={handleLogout} className="flex-1 py-3 bg-red-600 text-white rounded-xl text-sm font-medium">Logout</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

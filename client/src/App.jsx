@@ -10,6 +10,9 @@ import AdminLayout from './admin/adminlayout.jsx';
 import AdminDashboard from './admin/dashboard.jsx';
 import Users from './admin/users';
 import Items from './admin/items.jsx';
+import Requests from './admin/requests.jsx';
+import DesignWorkspace from './admin/design.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 import Registration from './pages/registrationPage.jsx';
 import ForgotPassword from './pages/forgottenpassword.jsx';
@@ -19,20 +22,42 @@ function App() {
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "your-google-client-id"}>
       
       <Routes>
-        {/* Admin Section */}
-        <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="users" element={<Users />} />
-        <Route path="items" element={<Items />} />
+        {/* Admin Section - Protected */}
+        <Route path="/admin" element={
+          <ProtectedRoute requiredRole="admin">
+            <AdminLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<Users />} />
+          <Route path="items" element={<Items />} />
+          <Route path="requests" element={<Requests />} />
+          <Route path="design" element={<DesignWorkspace />} />
         </Route>
 
-        {/* User Section */}
+        {/* User Section - Protected */}
         <Route path="/" element={<Navigate to="/dashboard" />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/room-setup" element={<RoomSetup />} />
-        <Route path="/editor-2d" element={<Editor2D />} />
-        <Route path="/viewer-3d" element={<Viewer3D />} />
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/room-setup" element={
+          <ProtectedRoute>
+            <RoomSetup />
+          </ProtectedRoute>
+        } />
+        <Route path="/editor-2d" element={
+          <ProtectedRoute>
+            <Editor2D />
+          </ProtectedRoute>
+        } />
+        <Route path="/viewer-3d" element={
+          <ProtectedRoute>
+            <Viewer3D />
+          </ProtectedRoute>
+        } />
         <Route path="/register" element={<Registration />} />
         <Route path="/registration" element={<Registration />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
