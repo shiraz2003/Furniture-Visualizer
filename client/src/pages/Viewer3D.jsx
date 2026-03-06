@@ -1,10 +1,10 @@
 import React, { useRef, useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import * as THREE from "three";
 import { GLTFLoader } from "three-stdlib";
 import { OrbitControls } from "three-stdlib";
-import { useDesign } from '../context/DesignContext';
-import { getModelById } from '../utils/modelRegistry';
+import { useDesign } from "../context/DesignContext";
+import { getModelById } from "../utils/modelRegistry";
 
 export default function Viewer3D() {
   const mountRef = useRef(null);
@@ -14,7 +14,7 @@ export default function Viewer3D() {
   useEffect(() => {
     if (!mountRef.current) return;
 
-    // Clear any existing canvas first
+    // Clear existing
     while (mountRef.current.firstChild) {
       mountRef.current.removeChild(mountRef.current.firstChild);
     }
@@ -39,7 +39,7 @@ export default function Viewer3D() {
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap; // Fixed: was PCFSoftShadowMap (deprecated)
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     mountRef.current.appendChild(renderer.domElement);
 
     // === LIGHTS ===
@@ -58,59 +58,53 @@ export default function Viewer3D() {
     scene.add(pointLight);
 
     // === ROOM ===
-    // Coordinate system:
-    // Origin (0,0,0) = back-left corner at floor level
-    // X: 0 → room.width  (left to right)
-    // Y: 0 → room.height (floor to ceiling)
-    // Z: 0 → room.length (back to front)
-
     // Floor
-    const floorGeometry = new THREE.PlaneGeometry(room.width, room.length);
-    const floorMaterial = new THREE.MeshStandardMaterial({
+    const floorGeo = new THREE.PlaneGeometry(room.width, room.length);
+    const floorMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(room.floorColor),
-      roughness: 0.8
+      roughness: 0.8,
     });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(room.width / 2, 0, room.length / 2);
     floor.receiveShadow = true;
     scene.add(floor);
 
     // Walls
-    const wallMaterial = new THREE.MeshStandardMaterial({
+    const wallMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(room.wallColor),
       roughness: 0.9,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
     });
 
-    // Back wall (z = 0)
+    // Back wall (z=0)
     const backWall = new THREE.Mesh(
       new THREE.BoxGeometry(room.width, room.height, 0.05),
-      wallMaterial
+      wallMat
     );
     backWall.position.set(room.width / 2, room.height / 2, 0);
     backWall.receiveShadow = true;
     scene.add(backWall);
 
-    // Left wall (x = 0)
+    // Left wall (x=0)
     const leftWall = new THREE.Mesh(
       new THREE.BoxGeometry(0.05, room.height, room.length),
-      wallMaterial
+      wallMat
     );
     leftWall.position.set(0, room.height / 2, room.length / 2);
     leftWall.receiveShadow = true;
     scene.add(leftWall);
 
-    // Right wall (x = room.width)
+    // Right wall (x=room.width)
     const rightWall = new THREE.Mesh(
       new THREE.BoxGeometry(0.05, room.height, room.length),
-      wallMaterial
+      wallMat
     );
     rightWall.position.set(room.width, room.height / 2, room.length / 2);
     rightWall.receiveShadow = true;
     scene.add(rightWall);
 
-    // === ORBIT CONTROLS ===
+    // === CONTROLS ===
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(room.width / 2, room.height / 4, room.length / 2);
     controls.enableDamping = true;
@@ -122,60 +116,77 @@ export default function Viewer3D() {
 
     // === LOAD FURNITURE ===
     const loader = new GLTFLoader();
-    const loadedModels = [];
 
     console.log("=== 3D VIEWER ===");
-    console.log("Room:", room.width, "x", room.length, "x", room.height);
-    console.log("Items:", items.length);
+    console.log(`Room: ${room.width}m x ${room.length}m x ${room.height}m`);
+    console.log(`Items to load: ${items.length}`);
 
-    items.forEach((item) => {
+    items.forEach((item, index) => {
       const modelData = getModelById(item.modelId);
       if (!modelData) {
-        console.warn("Model not found:", item.modelId);
+        console.warn(`[${index}] Model not found: ${item.modelId}`);
         return;
       }
+
+      console.log(`[${index}] Loading ${modelData.name} | 2D pos: x=${item.x.toFixed(2)}, z=${item.z.toFixed(2)}`);
 
       loader.load(
         modelData.modelPath,
         (gltf) => {
           const model = gltf.scene;
 
-          // Step 1: Get the model's bounding box BEFORE scaling
-          const box = new THREE.Box3().setFromObject(model);
-          const size = new THREE.Vector3();
-          const center = new THREE.Vector3();
-          box.getSize(size);
-          box.getCenter(center);
+          // --- Step 1: Measure raw model ---
+          const rawBox = new THREE.Box3().setFromObject(model);
+          const rawSize = new THREE.Vector3();
+          const rawCenter = new THREE.Vector3();
+          rawBox.getSize(rawSize);
+          rawBox.getCenter(rawCenter);
 
-          // Step 2: Recenter the model so its bottom-center is at origin
-          // This ensures consistent positioning regardless of model origin
-          model.position.set(
-            -center.x,       // Center horizontally
-            -box.min.y,      // Bottom sits at y=0
-            -center.z        // Center depth-wise
-          );
+          console.log(`  Raw size: w=${rawSize.x.toFixed(2)}, h=${rawSize.y.toFixed(2)}, d=${rawSize.z.toFixed(2)}`);
 
-          // Step 3: Wrap in a group for clean transforms
+          // --- Step 2: Calculate auto-scale to match desired size ---
+          const desiredW = modelData.size.w;
+          const desiredH = modelData.size.h;
+          const desiredD = modelData.size.d;
+
+          // Scale each axis to fit desired dimensions, use uniform (smallest) scale
+          const scaleForW = desiredW / rawSize.x;
+          const scaleForH = desiredH / rawSize.y;
+          const scaleForD = desiredD / rawSize.z;
+          const autoScale = Math.min(scaleForW, scaleForH, scaleForD);
+
+          // Apply item.scale on top (user scaling from editor)
+          const finalScale = autoScale * item.scale;
+
+          // --- Step 3: Recenter model ---
+          // Move model so its bottom-center is at (0, 0, 0)
+          model.position.set(-rawCenter.x, -rawBox.min.y, -rawCenter.z);
+
+          // --- Step 4: Wrap in group ---
           const group = new THREE.Group();
           group.add(model);
-
-          // Step 4: Apply scale
-          const finalScale = modelData.defaultScale * item.scale;
           group.scale.set(finalScale, finalScale, finalScale);
 
-          // Step 5: Position from 2D editor (meters)
-          // x: left-right in room (0 to room.width)
-          // z: top-bottom in 2D = back-front in 3D (0 to room.length)
-          group.position.set(
-            item.x,
-            modelData.yOffset,
-            item.z
-          );
+          // --- Step 5: Position in room ---
+          // X and Z come directly from 2D editor (in meters)
+          // Y depends on category:
+          //   - lighting: hang from ceiling
+          //   - everything else: sit on floor (y=0)
+          let yPos = 0;
+          if (modelData.category === "lighting") {
+            // Hang from ceiling: room height minus scaled model height
+            const scaledHeight = rawSize.y * finalScale;
+            yPos = room.height - scaledHeight;
+          }
 
-          // Step 6: Rotation
-          group.rotation.y = THREE.MathUtils.degToRad(item.rotation) + modelData.defaultRotationY;
+          group.position.set(item.x, yPos, item.z);
 
-          // Step 7: Shadows
+          // --- Step 6: Rotation ---
+          group.rotation.y =
+            THREE.MathUtils.degToRad(item.rotation) +
+            modelData.defaultRotationY;
+
+          // --- Step 7: Shadows ---
           group.traverse((child) => {
             if (child.isMesh) {
               child.castShadow = true;
@@ -184,26 +195,34 @@ export default function Viewer3D() {
           });
 
           scene.add(group);
-          loadedModels.push(group);
 
-          console.log(`✓ ${modelData.name} → pos(${item.x.toFixed(2)}, ${modelData.yOffset}, ${item.z.toFixed(2)}) | modelSize(${size.x.toFixed(2)}, ${size.y.toFixed(2)}, ${size.z.toFixed(2)})`);
+          // --- Debug ---
+          const scaledW = (rawSize.x * finalScale).toFixed(2);
+          const scaledH = (rawSize.y * finalScale).toFixed(2);
+          const scaledD = (rawSize.z * finalScale).toFixed(2);
+          console.log(
+            `  ✓ ${modelData.name} | ` +
+            `3D pos(${group.position.x.toFixed(2)}, ${group.position.y.toFixed(2)}, ${group.position.z.toFixed(2)}) | ` +
+            `autoScale=${autoScale.toFixed(4)} finalScale=${finalScale.toFixed(4)} | ` +
+            `scaled size(${scaledW}, ${scaledH}, ${scaledD})`
+          );
         },
         undefined,
         (error) => {
-          console.error(`✗ Error loading ${modelData.name}:`, error);
+          console.error(`  ✗ Error loading ${modelData.name}:`, error);
         }
       );
     });
 
-    // Handle resize
+    // Resize
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
-    // Animation loop
+    // Animate
     let animationId;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
@@ -214,36 +233,39 @@ export default function Viewer3D() {
 
     // Cleanup
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animationId);
       controls.dispose();
       renderer.dispose();
-      if (mountRef.current && renderer.domElement.parentNode === mountRef.current) {
+      if (
+        mountRef.current &&
+        renderer.domElement.parentNode === mountRef.current
+      ) {
         mountRef.current.removeChild(renderer.domElement);
       }
     };
   }, [room, items]);
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: "relative" }}>
       <div ref={mountRef} style={{ width: "100vw", height: "100vh" }} />
 
       {/* Back button */}
       <button
-        onClick={() => navigate('/editor-2d')}
+        onClick={() => navigate("/editor-2d")}
         style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          padding: '10px 20px',
-          background: 'rgba(0,0,0,0.7)',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: '600',
-          zIndex: 10
+          position: "absolute",
+          top: 20,
+          left: 20,
+          padding: "10px 20px",
+          background: "rgba(0,0,0,0.7)",
+          color: "#fff",
+          border: "none",
+          borderRadius: 8,
+          cursor: "pointer",
+          fontSize: 14,
+          fontWeight: 600,
+          zIndex: 10,
         }}
       >
         ← Back to Editor
@@ -252,20 +274,24 @@ export default function Viewer3D() {
       {/* Info panel */}
       <div
         style={{
-          position: 'absolute',
-          top: '20px',
-          right: '20px',
-          padding: '15px',
-          background: 'rgba(0,0,0,0.7)',
-          color: '#fff',
-          borderRadius: '8px',
-          fontSize: '14px',
-          zIndex: 10
+          position: "absolute",
+          top: 20,
+          right: 20,
+          padding: 15,
+          background: "rgba(0,0,0,0.7)",
+          color: "#fff",
+          borderRadius: 8,
+          fontSize: 14,
+          zIndex: 10,
         }}
       >
-        <div><strong>Room:</strong> {room.width}m × {room.length}m × {room.height}m</div>
-        <div><strong>Items:</strong> {items.length}</div>
-        <div style={{ marginTop: '10px', fontSize: '12px', color: '#aaa' }}>
+        <div>
+          <strong>Room:</strong> {room.width}m × {room.length}m × {room.height}m
+        </div>
+        <div>
+          <strong>Items:</strong> {items.length}
+        </div>
+        <div style={{ marginTop: 10, fontSize: 12, color: "#aaa" }}>
           Drag to rotate • Scroll to zoom • Right-click to pan
         </div>
       </div>
@@ -273,27 +299,32 @@ export default function Viewer3D() {
       {/* Debug panel */}
       <div
         style={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '20px',
-          padding: '15px',
-          background: 'rgba(0,0,0,0.7)',
-          color: '#fff',
-          borderRadius: '8px',
-          fontSize: '11px',
-          maxWidth: '400px',
-          maxHeight: '200px',
-          overflow: 'auto',
-          zIndex: 10
+          position: "absolute",
+          bottom: 20,
+          left: 20,
+          padding: 15,
+          background: "rgba(0,0,0,0.7)",
+          color: "#fff",
+          borderRadius: 8,
+          fontSize: 11,
+          maxWidth: 400,
+          maxHeight: 200,
+          overflow: "auto",
+          zIndex: 10,
         }}
       >
         <strong>Items ({items.length}):</strong>
-        {items.length === 0 && <div style={{ color: '#e74c3c' }}>No items! Go back to 2D Editor and place furniture.</div>}
+        {items.length === 0 && (
+          <div style={{ color: "#e74c3c" }}>
+            No items! Place furniture in 2D Editor first.
+          </div>
+        )}
         {items.map((item, idx) => {
           const model = getModelById(item.modelId);
           return (
-            <div key={idx} style={{ marginTop: '4px' }}>
-              {model?.name}: x={item.x.toFixed(2)}m, z={item.z.toFixed(2)}m, rot={item.rotation}°, scale={item.scale}x
+            <div key={idx} style={{ marginTop: 4 }}>
+              {model?.name}: x={item.x.toFixed(2)}m, z={item.z.toFixed(2)}m,
+              rot={item.rotation}°, scale={item.scale}x
             </div>
           );
         })}
