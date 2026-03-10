@@ -4,11 +4,12 @@ import { designService } from "../services/designService.js";
 import { furnitureService } from "../services/furnitureService.js";
 import Navbar from "../components/Navbar.jsx";
 import Furniture from "./furniture.jsx";
-import FurnitureCard from "../components/FurnitureCard.jsx";
+import FurnitureCard from "../components/furniturecard.jsx";
 import { IoHome } from "react-icons/io5";
 import { FaBed } from "react-icons/fa";
 import { PiDeskFill } from "react-icons/pi";
 import { GiSofa } from "react-icons/gi";
+
 import Footer from "../components/footer.jsx";
 
 export default function Dashboard() {
@@ -23,7 +24,40 @@ export default function Dashboard() {
   const [latestFurniture, setLatestFurniture] = useState([]);
   const [allFurniture, setAllFurniture] = useState([]);
   const [furnitureLoading, setFurnitureLoading] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
+
+  // Hero carousel slides data
+  const heroSlides = [
+    {
+      id: 1,
+      image: "/carosel01.jpg",
+      title: "Elevate Your Home Decor with Our Premium Furniture Collection",
+      subtitle: "Transform Your Living Space",
+      buttonText: "Shop Now",
+    },
+    {
+      id: 2,
+      image: "/carosel02.jpg",
+      title: "Modern Comfort Meets Timeless Design",
+      subtitle: "Discover Our Latest Collection",
+      buttonText: "Explore",
+    },
+    {
+      id: 3,
+      image: "/Carosel03.jpg",
+      title: "Create Your Perfect Living Space",
+      subtitle: "Quality Furniture for Every Room",
+      buttonText: "View Catalog",
+    },
+    {
+      id: 4,
+      image: "/carosel04.jpg",
+      title: "Furniture That Tells Your Story",
+      subtitle: "Personalized Interior Solutions",
+      buttonText: "Get Started",
+    },
+  ];
 
   // Category icon mapping
   const categoryIcons = {
@@ -87,6 +121,41 @@ export default function Dashboard() {
   useEffect(() => {
     loadDesigns();
     loadFurniture();
+  }, []);
+
+  // Auto-play carousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 5000); // Change slide every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [heroSlides.length]);
+
+  // Carousel navigation functions
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide(
+      (prev) => (prev - 1 + heroSlides.length) % heroSlides.length,
+    );
+  };
+
+  const goToSlide = (index) => {
+    setCurrentSlide(index);
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.key === "ArrowLeft") prevSlide();
+      if (e.key === "ArrowRight") nextSlide();
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
   }, []);
 
   async function loadDesigns() {
@@ -179,29 +248,112 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* ===== HERO SECTION ===== */}
-      <section
-        className="w-full h-[400px] sm:h-[500px] lg:h-[616px] -mt-[80px] relative flex flex-col items-center justify-center bg-cover bg-center bg-no-repeat px-4"
-        style={{
-          backgroundImage: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1440&h=696&fit=crop')`,
-        }}
-      >
-        <h1 className="font-kufam font-medium text-[28px] sm:text-[36px] lg:text-[48px] leading-tight text-center text-[#F5F5F5] max-w-[324px] sm:max-w-[624px] lg:max-w-[824px] px-4">
-          Elevate Your Home Decor with Our Premium Furniture Collection
-        </h1>
-        <button className="mt-[18px] w-[160px] sm:w-[180px] lg:w-[192px] h-[50px] sm:h-[55px] lg:h-[59px] bg-white rounded-[5px] flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
-          <span className="font-kufam font-medium text-[18px] sm:text-[20px] lg:text-[24px] leading-tight text-black">
-            Contact Us
-          </span>
+      {/* ===== HERO CAROUSEL SECTION ===== */}
+      <section className="w-full h-[400px] sm:h-[500px] lg:h-[616px] -mt-[80px] relative overflow-hidden">
+        {/* Carousel slides */}
+        <div
+          className="flex transition-transform duration-500 ease-in-out h-full"
+          style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+        >
+          {heroSlides.map((slide, index) => (
+            <div
+              key={slide.id}
+              className="w-full h-full flex-shrink-0 relative flex flex-col items-center justify-center bg-cover bg-center bg-no-repeat px-4"
+              style={{
+                backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('${slide.image}')`,
+              }}
+            >
+              <div className="text-center max-w-[900px] mx-auto">
+                <p className="font-kufam font-normal text-[14px] sm:text-[16px] lg:text-[18px] leading-tight text-secondary mb-2 sm:mb-3 animate-fade-in">
+                  {slide.subtitle}
+                </p>
+                <h1 className="font-kufam font-medium text-[28px] sm:text-[36px] lg:text-[48px] leading-tight text-center text-white px-4 mb-6 sm:mb-8 animate-slide-up">
+                  {slide.title}
+                </h1>
+                <button
+                  className="btn-primary animate-fade-in"
+                  onClick={() => navigate("/furniture")}
+                >
+                  <span className="font-kufam font-medium text-[16px] sm:text-[18px] lg:text-[20px] leading-tight">
+                    {slide.buttonText}
+                  </span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Navigation arrows */}
+        <button
+          onClick={prevSlide}
+          className="absolute left-4 sm:left-6 lg:left-8 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full p-2 sm:p-3 transition-all duration-300 group"
+          aria-label="Previous slide"
+        >
+          <svg
+            className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:text-accent transition-colors"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
         </button>
+
+        <button
+          onClick={nextSlide}
+          className="absolute right-4 sm:right-6 lg:right-8 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-full p-2 sm:p-3 transition-all duration-300 group"
+          aria-label="Next slide"
+        >
+          <svg
+            className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:text-accent transition-colors"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
+
+        {/* Slide indicators */}
+        <div className="absolute bottom-4 sm:bottom-6 lg:bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 sm:space-x-3">
+          {heroSlides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
+                index === currentSlide
+                  ? "bg-white scale-110 shadow-lg"
+                  : "bg-white/60 hover:bg-white/80"
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+
+        {/* Slide counter */}
+        <div className="absolute top-4 sm:top-6 lg:top-8 right-4 sm:right-6 lg:right-8 bg-black/30 backdrop-blur-sm rounded-lg px-3 py-1 sm:px-4 sm:py-2">
+          <span className="text-white font-kufam text-[12px] sm:text-[14px]">
+            {currentSlide + 1} / {heroSlides.length}
+          </span>
+        </div>
       </section>
 
       {/* ===== CATEGORY SECTION ===== */}
       <section className="max-w-[1440px] mx-auto pt-[20px] sm:pt-[30px] lg:pt-[40px] pb-[20px] sm:pb-[30px] lg:pb-[40px]">
-        <h2 className="font-kufam font-medium text-[20px] sm:text-[22px] lg:text-[24px] leading-tight text-black text-center mb-[20px] sm:mb-[30px] lg:mb-[40px] px-4">
+        <h2 className="font-kufam font-medium text-[20px] sm:text-[22px] lg:text-[24px] leading-tight text-primary text-center mb-[20px] sm:mb-[30px] lg:mb-[40px] px-4">
           Category
         </h2>
         <div className="flex justify-start sm:justify-center gap-[15px] sm:gap-[20px] lg:gap-[25px] px-4 sm:px-[25px] lg:px-[50px] overflow-x-auto pb-4">
@@ -212,13 +364,13 @@ export default function Dashboard() {
               className={`min-w-[180px] sm:min-w-[200px] lg:min-w-[248px] h-[120px] sm:h-[140px] lg:h-[162px] rounded-[10px] flex flex-col items-center justify-center cursor-pointer transition-colors flex-shrink-0
                 ${
                   activeCategory === cat.name
-                    ? "bg-[#527A9A] text-white shadow-[0_0_16px_rgba(9,43,66,0.25)]"
-                    : "bg-[#F7FBFF] text-black shadow-[0_0_16px_rgba(9,43,66,0.25)]"
+                    ? "bg-primary text-white shadow-primary"
+                    : "bg-accent-50 text-primary shadow-soft border border-accent-200"
                 }`}
             >
               <div
                 className={`text-[28px] sm:text-[32px] lg:text-[40px] mb-[4px] sm:mb-[6px] ${
-                  activeCategory === cat.name ? "text-white" : "text-[#092B42]"
+                  activeCategory === cat.name ? "text-white" : "text-primary"
                 }`}
               >
                 {cat.icon}
@@ -237,7 +389,7 @@ export default function Dashboard() {
       {/* ===== POPULAR PRODUCT ===== */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-[25px] lg:px-[50px] pb-[20px] sm:pb-[30px] lg:pb-[40px]">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-[20px] sm:mb-[30px] lg:mb-[40px] gap-4">
-          <h2 className="font-kufam font-medium text-[20px] sm:text-[22px] lg:text-[24px] leading-tight text-black">
+          <h2 className="font-kufam font-medium text-[20px] sm:text-[22px] lg:text-[24px] leading-tight text-primary">
             Popular Product
           </h2>
           <a
@@ -248,7 +400,7 @@ export default function Dashboard() {
                 `/furniture${activeCategory !== "All" ? `?category=${encodeURIComponent(activeCategory)}` : ""}`,
               );
             }}
-            className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-black hover:underline cursor-pointer self-start sm:self-auto"
+            className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-secondary hover:text-primary hover:underline cursor-pointer self-start sm:self-auto transition-colors"
           >
             See all
           </a>
