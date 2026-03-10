@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api.js';
+import axios from 'axios';
 import Navbar from '../components/Navbar.jsx';
 
 export default function Profile() {
@@ -25,7 +25,14 @@ export default function Profile() {
         try {
             setLoading(true);
             setError('');
-            const response = await api.get('/auth/profile');
+            const response = await axios.get(
+                import.meta.env.VITE_BACKEND_URL + '/api/auth/profile',
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             setUserProfile({
                 firstname: response.data.firstname || '',
                 lastname: response.data.lastname || '',
@@ -86,7 +93,15 @@ export default function Profile() {
             setError('');
             setSuccessMessage('');
 
-            const response = await api.put('/auth/profile', userProfile);
+            const response = await axios.put(
+                import.meta.env.VITE_BACKEND_URL + '/api/auth/profile', 
+                userProfile,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                    }
+                }
+            );
             setSuccessMessage('Profile updated successfully!');
             setIsEditing(false);
             

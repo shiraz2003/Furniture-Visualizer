@@ -20,11 +20,11 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         // Users ගණන ලබා ගැනීම
-        const userRes = await axios.get('http://localhost:5000/api/admin/users');
+        const userRes = await axios.get(import.meta.env.VITE_BACKEND_URL + '/api/admin/users');
         setUserCount(userRes.data.length.toString());
 
         // Items ගණන ලබා ගැනීම
-        const itemRes = await axios.get('http://localhost:5000/api/furniture/all');
+        const itemRes = await axios.get(import.meta.env.VITE_BACKEND_URL + '/api/furniture/all');
         setItems(itemRes.data);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);

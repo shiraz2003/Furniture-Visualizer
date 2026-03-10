@@ -30,7 +30,7 @@ const Users = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/admin/users');
+      const response = await axios.get(import.meta.env.VITE_BACKEND_URL + '/api/admin/users');
       const formattedUsers = response.data.map(u => ({
         id: u._id,
         name: `${u.firstname} ${u.lastname}`,
@@ -61,7 +61,7 @@ const Users = () => {
   const handleAddUser = async () => {
     setLoading(true);
     try {
-      await axios.post('http://localhost:5000/api/admin/users', formData);
+      await axios.post(import.meta.env.VITE_BACKEND_URL + '/api/admin/users', formData);
       toast.success("User added successfully!");
       fetchUsers(); 
       setShowConfirmModal(false);
@@ -76,7 +76,7 @@ const Users = () => {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/admin/users/${userToDelete.id}`);
+      await axios.delete(import.meta.env.VITE_BACKEND_URL + `/api/admin/users/${userToDelete.id}`);
       toast.success("Account removed!");
       fetchUsers();
       setShowDeleteModal(false);
