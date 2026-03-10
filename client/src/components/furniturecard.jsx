@@ -89,11 +89,7 @@ export default function FurnitureCard(props) {
         <img
           src={imageError ? "https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=No+Image" : (furniture?.image || "https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=Furniture")}
           className={`w-full h-full object-cover rounded-lg cursor-pointer transition-opacity ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
-          onClick={() => {
-            if (furniture?._id) {
-              navigate(`/furniture-details/${furniture._id}`);
-            }
-          }}
+          
           onLoad={() => setImageLoading(false)}
           onError={() => {
             console.log('Image failed to load:', furniture?.image);
@@ -163,16 +159,7 @@ export default function FurnitureCard(props) {
               {!isLoggedIn ? "Login to Add to Cart" : "Add to Cart"}
             </button>
             
-            <button 
-              className="w-full font-medium py-2 px-4 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors duration-200"
-              onClick={() => {
-                if (furniture?._id) {
-                  navigate(`/furniture-details/${furniture._id}`);
-                }
-              }}
-            >
-              View Details
-            </button>
+            
             
             {furniture?.model3DUrl && (
               <button 

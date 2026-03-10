@@ -5,11 +5,33 @@ import { useNavigate } from 'react-router-dom';
 import { FaTrash} from 'react-icons/fa';
 import { FaShoppingCart } from 'react-icons/fa';
 import Navbar from "../components/Navbar";
+import { useDesign } from '../context/DesignContext';
+import axios from 'axios';
 
 export default function Cart() {
     const [cartItems, setCartItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const { room } = useDesign();
+    
+    // Order form state
+    const [showOrderForm, setShowOrderForm] = useState(false);
+    const [orderFormData, setOrderFormData] = useState({
+        customerName: '',
+        email: '',
+        phone: '',
+        address: '',
+        city: '',
+        zipCode: '',
+        notes: '',
+        // Room setup fields
+        roomWidth: room.width,
+        roomLength: room.length,
+        roomHeight: room.height,
+        wallColor: room.wallColor,
+        floorColor: room.floorColor
+    });
+    const [submittingOrder, setSubmittingOrder] = useState(false);
 
     useEffect(() => {
         loadCartItems();
@@ -90,14 +112,88 @@ export default function Cart() {
             toast.error('Your cart is empty');
             return;
         }
-        navigate('/checkout', { 
-            state: { 
+        setShowOrderForm(true);
+    };
+    
+    const handleOrderFormChange = (e) => {
+        const { name, value, type } = e.target;
+        setOrderFormData(prev => ({
+            ...prev,
+            [name]: type === 'number' ? parseFloat(value) || 0 : value
+        }));
+    };
+    
+    const handleSubmitOrder = async (e) => {
+        e.preventDefault();
+        
+        // Validate required fields
+        if (!orderFormData.customerName || !orderFormData.email || !orderFormData.phone || !orderFormData.address) {
+            toast.error('Please fill in all required fields');
+            return;
+        }
+        
+        setSubmittingOrder(true);
+        
+        try {
+            const orderData = {
+                customer: {
+                    name: orderFormData.customerName,
+                    email: orderFormData.email,
+                    phone: orderFormData.phone,
+                    address: {
+                        street: orderFormData.address,
+                        city: orderFormData.city,
+                        zipCode: orderFormData.zipCode
+                    }
+                },
+                roomSetup: {
+                    width: orderFormData.roomWidth,
+                    length: orderFormData.roomLength,
+                    height: orderFormData.roomHeight,
+                    wallColor: orderFormData.wallColor,
+                    floorColor: orderFormData.floorColor
+                },
                 items: cartItems,
-                subtotal: cartTotal,
-                tax: taxAmount,
-                total: finalTotal
-            } 
-        });
+                pricing: {
+                    subtotal: cartTotal,
+                    tax: taxAmount,
+                    total: finalTotal
+                },
+                notes: orderFormData.notes,
+                orderDate: new Date().toISOString()
+            };
+            
+            const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            await axios.post(`${apiUrl}/api/admin/orders`, orderData);
+            
+            // Clear cart and form
+            localStorage.removeItem('furnitureCart');
+            setCartItems([]);
+            setOrderFormData({
+                customerName: '',
+                email: '',
+                phone: '',
+                address: '',
+                city: '',
+                zipCode: '',
+                notes: '',
+                roomWidth: room.width,
+                roomLength: room.length,
+                roomHeight: room.height,
+                wallColor: room.wallColor,
+                floorColor: room.floorColor
+            });
+            setShowOrderForm(false);
+            
+            toast.success('Order submitted successfully! Admin has been notified.');
+            window.dispatchEvent(new Event('cartUpdated'));
+            
+        } catch (error) {
+            console.error('Error submitting order:', error);
+            toast.error('Failed to submit order. Please try again.');
+        } finally {
+            setSubmittingOrder(false);
+        }
     };
 
     const cartTotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -282,7 +378,7 @@ export default function Cart() {
                                     className="w-full text-white font-semibold py-3 px-4 rounded-lg mt-6 bg-amber-600 hover:bg-amber-700 transition-colors duration-200 flex items-center justify-center gap-2"
                                 >
                                     <FaShoppingCart className="h-5 w-5" />
-                                    Proceed to Checkout
+                                    Place Order
                                 </button>
                                 
                                 <button
@@ -292,6 +388,244 @@ export default function Cart() {
                                     Continue Shopping
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Order Form Modal */}
+                {showOrderForm && (
+                    <div className="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-slate-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20">
+                            <h2 className="text-2xl font-bold text-white mb-6">Complete Your Order</h2>
+                            
+                            {/* Room Setup Summary */}
+                            <div className="mb-6 p-4 bg-amber-600/20 rounded-lg border border-amber-600/30">
+                                <h3 className="text-lg font-semibold text-amber-400 mb-2">Room Setup Details</h3>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div><span className="text-slate-300">Dimensions:</span> <span className="text-white">{orderFormData.roomWidth}m × {orderFormData.roomLength}m × {orderFormData.roomHeight}m</span></div>
+                                    <div><span className="text-slate-300">Wall Color:</span> <span className="text-white">{orderFormData.wallColor}</span></div>
+                                    <div><span className="text-slate-300">Floor Color:</span> <span className="text-white">{orderFormData.floorColor}</span></div>
+                                </div>
+                            </div>
+                            
+                            {/* Order Summary */}
+                            <div className="mb-6 p-4 bg-slate-700/50 rounded-lg">
+                                <h3 className="text-lg font-semibold text-white mb-2">Order Summary</h3>
+                                <div className="space-y-1 text-sm">
+                                    <div className="flex justify-between"><span className="text-slate-300">Items:</span><span className="text-white">${cartTotal.toFixed(2)}</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-300">Tax:</span><span className="text-white">${taxAmount.toFixed(2)}</span></div>
+                                    <div className="flex justify-between text-lg font-semibold"><span className="text-green-400">Total:</span><span className="text-green-400">${finalTotal.toFixed(2)}</span></div>
+                                </div>
+                            </div>
+                            
+                            {/* Customer Information Form */}
+                            <form onSubmit={handleSubmitOrder} className="space-y-6">
+                                {/* Room Setup Fields */}
+                                <div className="border border-slate-600 rounded-lg p-4">
+                                    <h4 className="text-lg font-semibold text-white mb-4">Customize Room Setup</h4>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-1">Width (meters)</label>
+                                            <input
+                                                type="number"
+                                                name="roomWidth"
+                                                value={orderFormData.roomWidth}
+                                                onChange={handleOrderFormChange}
+                                                min="1"
+                                                max="20"
+                                                step="0.1"
+                                                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                                placeholder="Width"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-1">Length (meters)</label>
+                                            <input
+                                                type="number"
+                                                name="roomLength"
+                                                value={orderFormData.roomLength}
+                                                onChange={handleOrderFormChange}
+                                                min="1"
+                                                max="20"
+                                                step="0.1"
+                                                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                                placeholder="Length"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-1">Height (meters)</label>
+                                            <input
+                                                type="number"
+                                                name="roomHeight"
+                                                value={orderFormData.roomHeight}
+                                                onChange={handleOrderFormChange}
+                                                min="2"
+                                                max="5"
+                                                step="0.1"
+                                                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                                placeholder="Height"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-1">Wall Color</label>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="color"
+                                                    name="wallColor"
+                                                    value={orderFormData.wallColor}
+                                                    onChange={handleOrderFormChange}
+                                                    className="w-12 h-10 bg-slate-700 border border-slate-600 rounded cursor-pointer"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    name="wallColor"
+                                                    value={orderFormData.wallColor}
+                                                    onChange={handleOrderFormChange}
+                                                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                                    placeholder="#ffffff"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-1">Floor Color</label>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="color"
+                                                    name="floorColor"
+                                                    value={orderFormData.floorColor}
+                                                    onChange={handleOrderFormChange}
+                                                    className="w-12 h-10 bg-slate-700 border border-slate-600 rounded cursor-pointer"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    name="floorColor"
+                                                    value={orderFormData.floorColor}
+                                                    onChange={handleOrderFormChange}
+                                                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                                    placeholder="#8B4513"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Customer Information */}
+                                <div className="border border-slate-600 rounded-lg p-4">
+                                    <h4 className="text-lg font-semibold text-white mb-4">Customer Information</h4>
+                                    
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-300 mb-1">Customer Name *</label>
+                                        <input
+                                            type="text"
+                                            name="customerName"
+                                            value={orderFormData.customerName}
+                                            onChange={handleOrderFormChange}
+                                            required
+                                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                            placeholder="Enter your full name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-300 mb-1">Email *</label>
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={orderFormData.email}
+                                            onChange={handleOrderFormChange}
+                                            required
+                                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                            placeholder="your@email.com"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-300 mb-1">Phone *</label>
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            value={orderFormData.phone}
+                                            onChange={handleOrderFormChange}
+                                            required
+                                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                            placeholder="Phone number"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-300 mb-1">Zip Code</label>
+                                        <input
+                                            type="text"
+                                            name="zipCode"
+                                            value={orderFormData.zipCode}
+                                            onChange={handleOrderFormChange}
+                                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                            placeholder="Zip code"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1">Address *</label>
+                                    <input
+                                        type="text"
+                                        name="address"
+                                        value={orderFormData.address}
+                                        onChange={handleOrderFormChange}
+                                        required
+                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                        placeholder="Street address"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1">City</label>
+                                    <input
+                                        type="text"
+                                        name="city"
+                                        value={orderFormData.city}
+                                        onChange={handleOrderFormChange}
+                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                        placeholder="City"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1">Additional Notes</label>
+                                    <textarea
+                                        name="notes"
+                                        value={orderFormData.notes}
+                                        onChange={handleOrderFormChange}
+                                        rows="3"
+                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                                        placeholder="Special instructions or notes for your order..."
+                                    ></textarea>
+                                </div>
+                                </div>
+                                
+                                {/* Form Actions */}
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowOrderForm(false)}
+                                        className="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-md transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={submittingOrder}
+                                        className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {submittingOrder ? 'Submitting...' : 'Submit Order'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 )}
