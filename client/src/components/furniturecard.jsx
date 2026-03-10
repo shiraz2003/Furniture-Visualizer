@@ -161,16 +161,8 @@ export default function FurnitureCard(props) {
             
             
             
-            {furniture?.model3DUrl && (
-              <button 
-                className="w-full font-medium py-2 px-4 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors duration-200"
-                onClick={() => {
-                  navigate(`/viewer-3d?model=${encodeURIComponent(furniture.model3DUrl)}&name=${encodeURIComponent(furniture.name || 'Unknown')}`);
-                }}
-              >
-                View in 3D
-              </button>
-            )}
+            
+        
           </div>
         </div>
       </div>

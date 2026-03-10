@@ -1,19 +1,91 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { designService } from '../services/designService.js';
-import Navbar from '../components/Navbar.jsx';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { designService } from "../services/designService.js";
+import { furnitureService } from "../services/furnitureService.js";
+import Navbar from "../components/Navbar.jsx";
+import Furniture from "./furniture.jsx";
+import FurnitureCard from "../components/FurnitureCard.jsx";
+import { IoHome } from "react-icons/io5";
+import { FaBed } from "react-icons/fa";
+import { PiDeskFill } from "react-icons/pi";
+import { GiSofa } from "react-icons/gi"
 
 export default function Dashboard() {
   const [designs, setDesigns] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('grid');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("grid");
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newDesignName, setNewDesignName] = useState('');
+  const [newDesignName, setNewDesignName] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [popularFurniture, setPopularFurniture] = useState([]);
+  const [latestFurniture, setLatestFurniture] = useState([]);
+  const [allFurniture, setAllFurniture] = useState([]);
+  const [furnitureLoading, setFurnitureLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Category icon mapping
+  const categoryIcons = {
+    Chair: <GiSofa />,
+    Sofa: <GiSofa />,
+    Table: <PiDeskFill />,
+    Bed: <FaBed />,
+    Lamp: "💡",
+    Desk: <PiDeskFill />,
+    Cabinet: "🗄️",
+    Bookshelf: "📚",
+    Dining: "🍽️",
+    "Living Room": "🛋️",
+    Bedroom: <FaBed />,
+    Office: "🏢",
+    All: <IoHome />,
+  };
+
+  // Generate dynamic categories from furniture data
+  const getDynamicCategories = () => {
+    if (!allFurniture.length)
+      return [{ name: "All", icon: "🏠", count: "0 Items Available" }];
+
+    // Count furniture by category
+    const categoryCount = allFurniture.reduce((acc, item) => {
+      const category = item.category || "Uncategorized";
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Create category objects with All option
+    const categories = [
+      {
+        name: "All",
+        icon: categoryIcons["All"],
+        count: `${allFurniture.length} Items Available`,
+      },
+    ];
+
+    Object.entries(categoryCount).forEach(([category, count]) => {
+      categories.push({
+        name: category,
+        icon: categoryIcons[category] || "📦", // Default icon for unknown categories
+        count: `${count} ${count === 1 ? "Item" : "Items"} Available`,
+      });
+    });
+
+    return categories;
+  };
+
+  // Filter furniture by selected category
+  const getFilteredFurniture = (furnitureArray, limit = null) => {
+    let filtered =
+      activeCategory === "All"
+        ? furnitureArray
+        : furnitureArray.filter((item) => item.category === activeCategory);
+
+    return limit ? filtered.slice(0, limit) : filtered;
+  };
 
   useEffect(() => {
     loadDesigns();
+    loadFurniture();
   }, []);
 
   async function loadDesigns() {
@@ -22,9 +94,27 @@ export default function Dashboard() {
       const data = await designService.list();
       setDesigns(data);
     } catch (err) {
-      console.error('Failed to load designs', err);
+      console.error("Failed to load designs", err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadFurniture() {
+    try {
+      setFurnitureLoading(true);
+      const [popular, latest, all] = await Promise.all([
+        furnitureService.getPopular(4),
+        furnitureService.getLatest(4),
+        furnitureService.getAll(),
+      ]);
+      setPopularFurniture(popular);
+      setLatestFurniture(latest);
+      setAllFurniture(all);
+    } catch (err) {
+      console.error("Failed to load furniture", err);
+    } finally {
+      setFurnitureLoading(false);
     }
   }
 
@@ -35,24 +125,24 @@ export default function Dashboard() {
       const design = await designService.create({
         name: newDesignName,
         room: { width: 800, height: 600, gridSize: 50 },
-        items: []
+        items: [],
       });
       setDesigns([design, ...designs]);
-      setNewDesignName('');
+      setNewDesignName("");
       setShowCreateModal(false);
       navigate(`/editor-2d?id=${design._id}`);
     } catch (err) {
-      alert('Failed to create design');
+      alert("Failed to create design");
     }
   }
 
   async function handleDeleteDesign(id) {
-    if (!window.confirm('Delete this design?')) return;
+    if (!window.confirm("Delete this design?")) return;
     try {
       await designService.remove(id);
-      setDesigns(designs.filter(d => d._id !== id));
+      setDesigns(designs.filter((d) => d._id !== id));
     } catch (err) {
-      alert('Failed to delete');
+      alert("Failed to delete");
     }
   }
 
@@ -61,252 +151,138 @@ export default function Dashboard() {
       const copy = await designService.create({
         name: `${design.name} (Copy)`,
         room: design.room,
-        items: design.items
+        items: design.items,
       });
       setDesigns([copy, ...designs]);
     } catch (err) {
-      alert('Failed to duplicate');
+      alert("Failed to duplicate");
     }
   }
 
-  const filteredDesigns = designs.filter(d =>
-    d.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredDesigns = designs.filter((d) =>
+    d.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const recentCount = designs.filter(d => {
+  const recentCount = designs.filter((d) => {
     const updated = new Date(d.updatedAt);
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     return updated > weekAgo;
   }).length;
 
   const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      {/* Header */}
-      <header className="bg-white/5 backdrop-blur-md border-b border-white/10 px-6 py-8">
-        <div className="max-w-7xl mx-auto flex justify-between items-center flex-wrap gap-6">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white to-rose-500 bg-clip-text text-transparent">
-              🏠 My Room Designs
-            </h1>
-            <p className="text-white/60 mt-2">Create, visualize, and perfect your dream spaces</p>
-          </div>
-          <div className="flex gap-4">
-            <div className="bg-rose-500/20 border border-rose-500/30 rounded-xl px-6 py-4 text-center min-w-[100px]">
-              <span className="block text-3xl font-bold text-rose-500">{designs.length}</span>
-              <span className="text-xs text-white/60 uppercase tracking-wider">Total</span>
-            </div>
-            <div className="bg-rose-500/20 border border-rose-500/30 rounded-xl px-6 py-4 text-center min-w-[100px]">
-              <span className="block text-3xl font-bold text-rose-500">{recentCount}</span>
-              <span className="text-xs text-white/60 uppercase tracking-wider">This Week</span>
-            </div>
-          </div>
-        </div>
-      </header>
 
-      {/* Toolbar */}
-      <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center flex-wrap gap-4">
-        <div className="relative flex-1 max-w-md">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/60">🔍</span>
-          <input
-            type="text"
-            placeholder="Search designs..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 rounded-full bg-white/5 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-rose-500 transition-all"
-          />
-        </div>
+      {/* ===== HERO SECTION ===== */}
+      <section
+        className="w-full h-[616px] -mt-[80px] relative flex flex-col items-center justify-center bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1440&h=696&fit=crop')`,
+        }}
+      >
+        <h1 className="font-kufam font-medium text-[48px] leading-[62px] text-center text-[#F5F5F5] max-w-[824px] px-4">
+          Elevate Your Home Decor with Our Premium Furniture Collection
+        </h1>
+        <button className="mt-[18px] w-[192px] h-[59px] bg-white rounded-[5px] flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+          <span className="font-kufam font-medium text-[24px] leading-[31px] text-black">
+            Contact Us
+          </span>
+        </button>
+      </section>
 
-        <div className="flex items-center gap-4">
-          <div className="flex bg-white/10 rounded-lg overflow-hidden">
-            <button
-              className={`px-4 py-2 text-xl transition-all ${viewMode === 'grid' ? 'bg-rose-500 text-white' : 'text-white/60 hover:bg-rose-500/50'}`}
-              onClick={() => setViewMode('grid')}
+      {/* ===== CATEGORY SECTION ===== */}
+      <section className="max-w-[1440px] mx-auto pt-[40px] pb-[40px] ">
+        <h2 className="font-kufam font-medium text-[24px] leading-[31px] text-black text-center mb-[40px] ">
+          Category
+        </h2>
+        <div className="flex justify-center gap-[25px] px-[50px] overflow-x-auto p-6">
+          {getDynamicCategories().map((cat) => (
+            <div
+              key={cat.name}
+              onClick={() => setActiveCategory(cat.name)}
+              className={`min-w-[248px] h-[162px] rounded-[10px] flex flex-col items-center justify-center cursor-pointer transition-colors
+                ${
+                  activeCategory === cat.name
+                    ? "bg-[#527A9A] text-white shadow-[0_0_16px_rgba(9,43,66,0.25)]"
+                    : "bg-[#F7FBFF] text-black shadow-[0_0_16px_rgba(9,43,66,0.25)]"
+                }`}
             >
-              ▦
-            </button>
-            <button
-              className={`px-4 py-2 text-xl transition-all ${viewMode === 'list' ? 'bg-rose-500 text-white' : 'text-white/60 hover:bg-rose-500/50'}`}
-              onClick={() => setViewMode('list')}
-            >
-              ☰
-            </button>
-          </div>
-
-          <button
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-rose-500 to-rose-600 rounded-full text-white font-semibold shadow-lg shadow-rose-500/40 hover:-translate-y-0.5 hover:shadow-xl transition-all"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <span className="text-xl">+</span> New Design
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <main className="max-w-7xl mx-auto px-6 pb-8">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-white/60">
-            <div className="w-12 h-12 border-4 border-white/10 border-t-rose-500 rounded-full animate-spin"></div>
-            <p className="mt-4">Loading your designs...</p>
-          </div>
-        ) : filteredDesigns.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-6xl animate-bounce">🛋️</div>
-            <h2 className="text-2xl font-semibold mt-4">No designs yet</h2>
-            <p className="text-white/60 mt-2 mb-8">Start creating your first room design!</p>
-            <button
-              className="px-8 py-4 bg-gradient-to-br from-rose-500 to-rose-600 rounded-full text-white font-semibold text-lg shadow-lg hover:scale-105 transition-transform"
-              onClick={() => setShowCreateModal(true)}
-            >
-              Create Your First Design
-            </button>
-          </div>
-        ) : (
-          <div className={viewMode === 'grid'
-            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-            : 'flex flex-col gap-4'
-          }>
-            {filteredDesigns.map((design) => (
               <div
-                key={design._id}
-                className={`bg-white/5 border border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-rose-500/50 hover:shadow-lg hover:shadow-black/30 ${viewMode === 'list' ? 'flex flex-row items-center' : 'flex flex-col'}`}
+                className={`text-[40px] mb-[6px] ${
+                  activeCategory === cat.name ? "text-white" : "text-[#092B42]"
+                }`}
               >
-                {/* Preview */}
-                <div className={`relative bg-gradient-to-br from-slate-800 to-slate-900 group ${viewMode === 'list' ? 'w-32 h-24 flex-shrink-0' : 'h-44'}`}>
-                  <div className="flex flex-col items-center justify-center h-full text-white/30">
-                    <span className="text-4xl">🏠</span>
-                    <small className="text-xs mt-1">{design.room?.width || 800} × {design.room?.height || 600}</small>
-                  </div>
-                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <button
-                      className="px-4 py-2 bg-rose-500 rounded-lg text-sm font-semibold hover:scale-105 transition-transform"
-                      onClick={() => navigate(`/editor-2d?id=${design._id}`)}
-                    >
-                      ✏️ Edit 2D
-                    </button>
-                    <button
-                      className="px-4 py-2 bg-slate-700 border border-white/20 rounded-lg text-sm font-semibold hover:scale-105 transition-transform"
-                      onClick={() => navigate(`/viewer-3d?id=${design._id}`)}
-                    >
-                      🎮 View 3D
-                    </button>
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className={`p-4 ${viewMode === 'list' ? 'flex-1' : ''}`}>
-                  <h3 className="font-semibold text-lg truncate">{design.name}</h3>
-                  <div className="flex gap-4 text-sm text-white/50 mt-1">
-                    <span>📦 {design.items?.length || 0} items</span>
-                    <span>📅 {formatDate(design.updatedAt)}</span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className={`flex border-t border-white/10 ${viewMode === 'list' ? 'flex-row border-t-0 border-l' : ''}`}>
-                  <button
-                    className="flex-1 py-3 text-white/60 hover:bg-white/10 hover:text-white transition-all"
-                    title="Duplicate"
-                    onClick={() => handleDuplicateDesign(design)}
-                  >
-                    📋
-                  </button>
-                  <button
-                    className="flex-1 py-3 text-white/60 hover:bg-rose-500/30 hover:text-rose-500 transition-all"
-                    title="Delete"
-                    onClick={() => handleDeleteDesign(design._id)}
-                  >
-                    🗑️
-                  </button>
-                </div>
+                {cat.icon}
               </div>
-            ))}
-          </div>
-        )}
-      </main>
-
-      {/* Create Modal */}
-      {showCreateModal && (
-        <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
-          onClick={() => setShowCreateModal(false)}
-        >
-          <div
-            className="bg-slate-900 border border-white/10 rounded-2xl w-[90%] max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center p-6 border-b border-white/10">
-              <h2 className="text-xl font-semibold">Create New Design</h2>
-              <button
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-rose-500 transition-colors flex items-center justify-center text-lg"
-                onClick={() => setShowCreateModal(false)}
-              >
-                ×
-              </button>
+              <p className="font-kufam font-medium text-[20px] leading-[26px] text-center">
+                {cat.name}
+              </p>
+              <p className="font-kufam font-normal text-[14px] leading-[18px] mt-[6px] text-center">
+                {cat.count}
+              </p>
             </div>
-
-            <form onSubmit={handleCreateDesign}>
-              <div className="p-6">
-                <label className="block mb-2 font-medium">Design Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Living Room, Bedroom..."
-                  value={newDesignName}
-                  onChange={(e) => setNewDesignName(e.target.value)}
-                  className="w-full px-4 py-3 border border-white/20 rounded-lg bg-white/5 text-white placeholder-white/40 focus:outline-none focus:border-rose-500 transition-all"
-                  autoFocus
-                />
-
-                <div className="mt-6">
-                  <p className="text-sm text-white/60 mb-3">Quick start templates:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { name: 'Living Room', icon: '🛋️' },
-                      { name: 'Bedroom', icon: '🛏️' },
-                      { name: 'Office', icon: '💼' },
-                      { name: 'Kitchen', icon: '🍳' }
-                    ].map((room) => (
-                      <button
-                        key={room.name}
-                        type="button"
-                        className="px-4 py-2 border border-white/20 rounded-full text-sm hover:bg-rose-500/30 hover:border-rose-500 transition-all"
-                        onClick={() => setNewDesignName(room.name)}
-                      >
-                        {room.icon} {room.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 p-6 border-t border-white/10">
-                <button
-                  type="button"
-                  className="px-6 py-3 border border-white/20 rounded-lg bg-transparent text-white hover:bg-white/10 transition-all"
-                  onClick={() => setShowCreateModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-gradient-to-br from-rose-500 to-rose-600 rounded-lg text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 transition-all"
-                  disabled={!newDesignName.trim()}
-                >
-                  Create Design
-                </button>
-              </div>
-            </form>
-          </div>
+          ))}
         </div>
-      )}
+      </section>
+
+      {/* ===== POPULAR PRODUCT ===== */}
+      <section className="max-w-[1440px] mx-auto px-[50px] pb-[40px]">
+        <div className="flex justify-between items-center mb-[40px]">
+          <h2 className="font-kufam font-medium text-[24px] leading-[31px] text-black">
+            Popular Product
+          </h2>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate(
+                "/furniture"
+              );
+            }}
+            className="font-kufam font-normal text-[20px] leading-[26px] text-black hover:underline cursor-pointer"
+          >
+            See all
+          </a>
+        </div>
+        <div className="flex justify-between gap-6">
+          {furnitureLoading ? (
+            // Loading skeleton
+            Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="w-[308px] min-h-[440px] bg-gray-200 animate-pulse rounded-[10px]"
+              >
+                <div className="w-[240px] h-[240px] bg-gray-300 rounded-lg mx-auto mb-4"></div>
+                <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                <div className="h-4 bg-gray-300 rounded mb-4 w-3/4"></div>
+                <div className="h-8 bg-gray-300 rounded"></div>
+              </div>
+            ))
+          ) : getFilteredFurniture(popularFurniture, 4).length > 0 ? (
+            getFilteredFurniture(popularFurniture, 4).map((furniture) => (
+              <FurnitureCard key={furniture._id} furniture={furniture} />
+            ))
+          ) : (
+            <div className="w-full text-center py-8">
+              <p className="text-gray-500">
+                {activeCategory === "All"
+                  ? "No popular furniture available"
+                  : `No ${activeCategory} furniture in popular section`}
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      
     </div>
   );
 }
