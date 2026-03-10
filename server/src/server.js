@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url'; // ES Modules සඳහා එක් කළ
 import userRouter from './routes/auth.js';
 import adminRoutes from './routes/admin/userroutes.js';
 import furnitureRoutes from './routes/admin/furnitureroutes.js'; // අලුතින් එක් කළ Furniture Routes
+import orderRoutes from './routes/orderroutes.js'; // Order Routes එක් කළා
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes සම්බන්ධ කිරීම
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin', orderRoutes); // Order Routes එක් කළා
 app.use('/api/auth', userRouter);
 app.use('/api/furniture', furnitureRoutes); // අලුත් Furniture API එක මෙතැනින් වැඩ කරයි
 

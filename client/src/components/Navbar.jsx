@@ -4,6 +4,7 @@ import { BiCart } from "react-icons/bi";
 import { useState, useEffect } from "react";
 import { HiMenu, HiX, HiHome, HiShoppingBag, HiInformationCircle, HiMail } from "react-icons/hi";
 import { IoLogOut } from "react-icons/io5";
+import { FaUserAlt } from "react-icons/fa";
 import toast from "react-hot-toast";
 
 export default function Header() {
@@ -58,6 +59,9 @@ export default function Header() {
                    </Link>
                      <Link to="/profile" className="text-base xl:text-xl font-semibold hover:text-white hover:scale-110 transition-transform duration-200">
                           profile
+                        </Link>
+                        <Link to="/furniture" className="text-base xl:text-xl font-semibold hover:text-white hover:scale-110 transition-transform duration-200">
+                          Furniture
                         </Link>
                </nav>
 
@@ -123,12 +127,20 @@ export default function Header() {
                            <HiMail className="text-2xl" />
                            Viewer 3D
                        </Link>
+                         <Link 
+                           to="/furniture" 
+                           className="text-lg font-semibold hover:text-white transition-colors py-2 flex items-center gap-3"
+                           onClick={() => setIsMenuOpen(false)}
+                       >
+                           <HiShoppingBag className="text-2xl" />
+                            Furniture
+                       </Link>
                        <Link 
                            to="/profile" 
                            className="text-lg font-semibold hover:text-white transition-colors py-2 flex items-center gap-3"
                            onClick={() => setIsMenuOpen(false)}
                        >
-                           <HiMail className="text-2xl" />
+                           <FaUserAlt className="text-2xl" />
                            profile
                        </Link>
                        {isLoggedIn && (
