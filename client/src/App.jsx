@@ -19,6 +19,8 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Registration from './pages/registrationPage.jsx';
 import ForgotPassword from './pages/forgottenpassword.jsx';
 import Profile from './pages/profile.jsx';
+import CartPage from './pages/cart.jsx';
+import Furniture from './pages/furniture.jsx';
 
 function App() {
   return (
@@ -60,6 +62,12 @@ function App() {
           } />
           <Route path="/profile" element={
             <Profile />
+          } />
+          <Route path="/cart" element={
+            <CartPage />
+          } />
+          <Route path="/furniture" element={
+            <Furniture />
           } />
           <Route path="/register" element={<Registration />} />
           <Route path="/registration" element={<Registration />} />
