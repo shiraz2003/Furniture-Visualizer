@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const designSchema = new mongoose.Schema({
   name: { type: String, default: "My Design" },
@@ -21,5 +21,4 @@ const designSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-const Design = mongoose.model("Design", designSchema);
-export default Design;
+module.exports = mongoose.model("Design", designSchema);

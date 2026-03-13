@@ -11,6 +11,30 @@ export default function Viewer3D() {
   const navigate = useNavigate();
   const { room, items } = useDesign();
 
+  const saveDesign = async () => {
+    const designData = { room, items };
+    
+    try {
+      // Replace with your actual backend URL
+      const response = await fetch("http://localhost:5000/api/designs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(designData),
+      });
+
+      if (response.ok) {
+        alert("Design saved to MongoDB successfully!");
+      } else {
+        alert("Failed to save design.");
+      }
+    } catch (error) {
+      console.error("Error saving design:", error);
+      alert("Server error. Could not save.");
+    }
+  };
+
   useEffect(() => {
     if (!mountRef.current) return;
 
@@ -269,6 +293,27 @@ export default function Viewer3D() {
         }}
       >
         ← Back to Editor
+      </button>
+
+      {/* Save Button */}
+      <button
+        onClick={saveDesign}
+        style={{
+          position: "absolute",
+          top: 70,
+          left: 20,
+          padding: "10px 20px",
+          background: "rgba(46, 204, 113, 0.9)",
+          color: "#fff",
+          border: "none",
+          borderRadius: 8,
+          cursor: "pointer",
+          fontSize: 14,
+          fontWeight: 600,
+          zIndex: 10,
+        }}
+      >
+        💾 Save Design
       </button>
 
       {/* Info panel */}

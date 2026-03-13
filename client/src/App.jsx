@@ -21,6 +21,7 @@ import ForgotPassword from './pages/forgottenpassword.jsx';
 import Profile from './pages/profile.jsx';
 import CartPage from './pages/cart.jsx';
 import Furniture from './pages/furniture.jsx';
+import SavedDesigns from './pages/SavedDesigns.jsx'; // <-- Add this import
 
 function App() {
   return (
@@ -60,6 +61,9 @@ function App() {
           <Route path="/viewer-3d" element={
             <Viewer3D />
           } />
+          <Route path="/saved-designs" element={
+            <SavedDesigns /> 
+          } />
           <Route path="/profile" element={
             <Profile />
           } />
@@ -72,6 +76,7 @@ function App() {
           <Route path="/register" element={<Registration />} />
           <Route path="/registration" element={<Registration />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          
         </Routes>
         <Toaster position="top-right" />
       </DesignProvider>
