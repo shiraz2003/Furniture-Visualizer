@@ -5,33 +5,24 @@ import { GLTFLoader } from "three-stdlib";
 import { OrbitControls } from "three-stdlib";
 import { useDesign } from "../context/DesignContext";
 import { getModelById } from "../utils/modelRegistry";
+import api from "../services/api";
 
 export default function Viewer3D() {
   const mountRef = useRef(null);
   const navigate = useNavigate();
-  const { room, items } = useDesign();
+  const { room, items, designName, setDesignName } = useDesign();
 
   const saveDesign = async () => {
-    const designData = { room, items };
-    
-    try {
-      // Replace with your actual backend URL
-      const response = await fetch("http://localhost:5000/api/designs", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(designData),
-      });
+    const designData = { name: designName?.trim() || "My Design", room, items };
 
-      if (response.ok) {
-        alert("Design saved to MongoDB successfully!");
-      } else {
-        alert("Failed to save design.");
-      }
+    try {
+      // Use configured axios instance so auth token is sent
+      await api.post("/designs", designData);
+      alert("Design saved successfully!");
     } catch (error) {
       console.error("Error saving design:", error);
-      alert("Server error. Could not save.");
+      const message = error?.response?.data?.error || error?.response?.data?.message || "Failed to save design.";
+      alert(message);
     }
   };
 
@@ -295,12 +286,45 @@ export default function Viewer3D() {
         ← Back to Editor
       </button>
 
+      {/* Design name */}
+      <div
+        style={{
+          position: "absolute",
+          top: 70,
+          left: 20,
+          zIndex: 10,
+          background: "rgba(0,0,0,0.7)",
+          padding: 10,
+          borderRadius: 8,
+          width: 260,
+        }}
+      >
+        <div style={{ color: "#fff", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+          Design name
+        </div>
+        <input
+          value={designName || ""}
+          onChange={(e) => setDesignName(e.target.value)}
+          placeholder="e.g. Living Room #1"
+          style={{
+            width: "100%",
+            padding: "8px 10px",
+            borderRadius: 6,
+            border: "1px solid rgba(255,255,255,0.25)",
+            background: "rgba(255,255,255,0.08)",
+            color: "#fff",
+            outline: "none",
+            fontSize: 13,
+          }}
+        />
+      </div>
+
       {/* Save Button */}
       <button
         onClick={saveDesign}
         style={{
           position: "absolute",
-          top: 70,
+          top: 150,
           left: 20,
           padding: "10px 20px",
           background: "rgba(46, 204, 113, 0.9)",

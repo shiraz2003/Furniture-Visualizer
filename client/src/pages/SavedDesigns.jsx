@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDesign } from "../context/DesignContext"; // Import your context
+import api from "../services/api";
 
 export default function SavedDesigns() {
   const [designs, setDesigns] = useState([]);
@@ -10,10 +11,9 @@ export default function SavedDesigns() {
   const { setRoom, setItems } = useDesign();
 
   useEffect(() => {
-    // Make sure the port matches your backend
-    fetch("http://localhost:5000/api/designs")
-      .then((res) => res.json())
-      .then((data) => setDesigns(data))
+    api
+      .get("/designs")
+      .then((res) => setDesigns(res.data))
       .catch((err) => console.error("Error fetching designs:", err));
   }, []);
 

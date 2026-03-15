@@ -8,6 +8,8 @@ import { TfiMoney } from 'react-icons/tfi';
 import { TbTax } from 'react-icons/tb';
 import { MdOutlineBedroomParent } from 'react-icons/md';
 import { PiWall } from 'react-icons/pi';
+import api from '../services/api.js';
+import { useDesign } from '../context/DesignContext.jsx';
 
 export default function Profile() {
     const [userProfile, setUserProfile] = useState({
@@ -33,15 +35,22 @@ export default function Profile() {
     const [selectedStatus, setSelectedStatus] = useState('');
     const [selectedDateRange, setSelectedDateRange] = useState('');
 
+    // Saved designs state
+    const [userDesigns, setUserDesigns] = useState([]);
+    const [designsLoading, setDesignsLoading] = useState(false);
+
+    const { setRoom, setItems, setDesignName } = useDesign();
+
     // Fetch user profile and orders on component mount
     useEffect(() => {
         fetchUserProfile();
     }, []);
     
-    // Fetch orders when user profile is loaded
+    // Fetch orders + designs when user profile is loaded
     useEffect(() => {
         if (userProfile.email) {
             fetchUserOrders();
+            fetchUserDesigns();
         }
     }, [userProfile.email]);
 
@@ -143,6 +152,29 @@ export default function Profile() {
         } finally {
             setOrdersLoading(false);
         }
+    };
+
+    const fetchUserDesigns = async () => {
+        try {
+            setDesignsLoading(true);
+            // don't clear a profile error if one already set; only clear design-specific errors
+
+            const res = await api.get('/designs');
+            setUserDesigns(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error('Error fetching designs:', err);
+            // don't override more important errors (like profile load)
+            setError(prev => prev || 'Failed to load saved designs');
+        } finally {
+            setDesignsLoading(false);
+        }
+    };
+
+    const loadDesignInViewer = (design) => {
+        setDesignName(design?.name || 'My Design');
+        setRoom(design?.room);
+        setItems(Array.isArray(design?.items) ? design.items : []);
+        window.location.href = '/viewer-3d';
     };
 
     // Get unique statuses for filter dropdown
@@ -646,6 +678,92 @@ export default function Profile() {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Saved Designs */}
+                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+                        <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+                            <div className="bg-indigo-700 px-6 py-4">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-xl font-bold text-white">Saved 3D Designs</h2>
+                                    <span className="text-white/90 text-sm">{userDesigns.length} total</span>
+                                </div>
+                            </div>
+
+                            <div className="p-6">
+                                {designsLoading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                                        <span className="ml-3 text-gray-600">Loading saved designs...</span>
+                                    </div>
+                                ) : userDesigns.length === 0 ? (
+                                    <div className="text-center py-10">
+                                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                                            <PiWall className="text-3xl" />
+                                        </div>
+                                        <h3 className="text-lg font-medium text-gray-900">No saved designs yet</h3>
+                                        <p className="text-gray-600 mt-1">Save a design from the 3D viewer to see it here.</p>
+                                        <div className="mt-4">
+                                            <button
+                                                onClick={() => (window.location.href = '/viewer-3d')}
+                                                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                                            >
+                                                Go to 3D Viewer
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                        {userDesigns.map(design => (
+                                            <div key={design._id} className="border border-gray-200 rounded-lg overflow-hidden bg-white hover:shadow-lg transition-shadow duration-200 flex flex-col">
+                                                {design.thumbnail ? (
+                                                    <img src={design.thumbnail} alt={design.name || 'Design'} className="w-full h-40 object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400 text-3xl">
+                                                        <PiArmchairFill />
+                                                    </div>
+                                                )}
+
+                                                <div className="p-4 flex-1 flex flex-col gap-3">
+                                                    <div>
+                                                        <h3 className="text-base font-semibold text-gray-900 truncate">{design.name || 'My Design'}</h3>
+                                                        <p className="text-xs text-gray-500 mt-1">
+                                                            {design.createdAt ? new Date(design.createdAt).toLocaleString() : ''}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-3 text-xs text-gray-600 bg-gray-50 p-3 rounded-md">
+                                                        <div className="flex items-center gap-2">
+                                                            <MdOutlineBedroomParent className="text-gray-500" />
+                                                            <div>
+                                                                <p className="font-medium">Room</p>
+                                                                <p>
+                                                                    {design.room?.width ?? '—'}×{design.room?.length ?? '—'}m
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <FaChair className="text-gray-500" />
+                                                            <div>
+                                                                <p className="font-medium">Items</p>
+                                                                <p>{Array.isArray(design.items) ? design.items.length : 0}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => loadDesignInViewer(design)}
+                                                        className="mt-auto w-full px-3 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                                                    >
+                                                        Open in 3D Viewer
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
