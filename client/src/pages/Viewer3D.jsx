@@ -10,18 +10,20 @@ import api from "../services/api";
 export default function Viewer3D() {
   const mountRef = useRef(null);
   const navigate = useNavigate();
-  const { room, items, designName, setDesignName } = useDesign();
+  const { room, items, designName, setDesignName, updateItem } = useDesign();
 
   const saveDesign = async () => {
     const designData = { name: designName?.trim() || "My Design", room, items };
 
     try {
-      // Use configured axios instance so auth token is sent
       await api.post("/designs", designData);
       alert("Design saved successfully!");
     } catch (error) {
       console.error("Error saving design:", error);
-      const message = error?.response?.data?.error || error?.response?.data?.message || "Failed to save design.";
+      const message =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        "Failed to save design.";
       alert(message);
     }
   };
@@ -29,7 +31,6 @@ export default function Viewer3D() {
   useEffect(() => {
     if (!mountRef.current) return;
 
-    // Clear existing
     while (mountRef.current.firstChild) {
       mountRef.current.removeChild(mountRef.current.firstChild);
     }
@@ -37,11 +38,9 @@ export default function Viewer3D() {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    // Scene
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a2e);
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
     camera.position.set(
       room.width / 2,
@@ -49,7 +48,6 @@ export default function Viewer3D() {
       room.length + room.length * 0.8
     );
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -57,7 +55,6 @@ export default function Viewer3D() {
     renderer.shadowMap.type = THREE.PCFShadowMap;
     mountRef.current.appendChild(renderer.domElement);
 
-    // === LIGHTS ===
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
@@ -72,7 +69,6 @@ export default function Viewer3D() {
     pointLight.position.set(room.width / 2, room.height - 0.3, room.length / 2);
     scene.add(pointLight);
 
-    // === ROOM ===
     // Floor
     const floorGeo = new THREE.PlaneGeometry(room.width, room.length);
     const floorMat = new THREE.MeshStandardMaterial({
@@ -83,6 +79,7 @@ export default function Viewer3D() {
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(room.width / 2, 0, room.length / 2);
     floor.receiveShadow = true;
+    floor.name = "__floor__";
     scene.add(floor);
 
     // Walls
@@ -92,7 +89,6 @@ export default function Viewer3D() {
       side: THREE.DoubleSide,
     });
 
-    // Back wall (z=0)
     const backWall = new THREE.Mesh(
       new THREE.BoxGeometry(room.width, room.height, 0.05),
       wallMat
@@ -101,7 +97,6 @@ export default function Viewer3D() {
     backWall.receiveShadow = true;
     scene.add(backWall);
 
-    // Left wall (x=0)
     const leftWall = new THREE.Mesh(
       new THREE.BoxGeometry(0.05, room.height, room.length),
       wallMat
@@ -110,7 +105,6 @@ export default function Viewer3D() {
     leftWall.receiveShadow = true;
     scene.add(leftWall);
 
-    // Right wall (x=room.width)
     const rightWall = new THREE.Mesh(
       new THREE.BoxGeometry(0.05, room.height, room.length),
       wallMat
@@ -119,7 +113,6 @@ export default function Viewer3D() {
     rightWall.receiveShadow = true;
     scene.add(rightWall);
 
-    // === CONTROLS ===
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(room.width / 2, room.height / 4, room.length / 2);
     controls.enableDamping = true;
@@ -129,79 +122,157 @@ export default function Viewer3D() {
     controls.maxPolarAngle = Math.PI * 0.85;
     controls.update();
 
+    // === MOVE / DRAG SUPPORT ===
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // y = 0
+    const planeHit = new THREE.Vector3();
+    const dragOffset = new THREE.Vector3();
+
+    let isDragging = false;
+    let draggedGroup = null;
+
+    const setMouseFromEvent = (e) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+    };
+
+    const findTaggedRoot = (obj) => {
+      let cur = obj;
+      while (cur) {
+        if (cur.userData && cur.userData.__designItemId) return cur;
+        cur = cur.parent;
+      }
+      return null;
+    };
+
+    // ✅ NEW: Clamp taking the model's footprint into account
+    // We store half-extents (x/z) on the group when it is loaded.
+    const clampToRoomWithExtents = (group, pos) => {
+      const ext = group?.userData?.__halfExtentsXZ || { x: 0, z: 0 };
+
+      // room min/max in world coords (your room is 0..width, 0..length)
+      const minX = 0 + ext.x;
+      const maxX = room.width - ext.x;
+      const minZ = 0 + ext.z;
+      const maxZ = room.length - ext.z;
+
+      // If an object is larger than the room in that axis, keep it centered
+      if (minX > maxX) pos.x = room.width / 2;
+      else pos.x = Math.max(minX, Math.min(maxX, pos.x));
+
+      if (minZ > maxZ) pos.z = room.length / 2;
+      else pos.z = Math.max(minZ, Math.min(maxZ, pos.z));
+    };
+
+    const onPointerDown = (e) => {
+      if (e.button !== 0) return;
+      setMouseFromEvent(e);
+      raycaster.setFromCamera(mouse, camera);
+
+      const hits = raycaster.intersectObjects(scene.children, true);
+      if (!hits.length) return;
+
+      const hit = hits.find((h) => h.object && h.object.name !== "__floor__");
+      if (!hit) return;
+
+      const root = findTaggedRoot(hit.object);
+      if (!root) return;
+
+      isDragging = true;
+      draggedGroup = root;
+      controls.enabled = false;
+
+      raycaster.ray.intersectPlane(dragPlane, planeHit);
+      dragOffset.copy(draggedGroup.position).sub(planeHit);
+    };
+
+    const onPointerMove = (e) => {
+      if (!isDragging || !draggedGroup) return;
+
+      setMouseFromEvent(e);
+      raycaster.setFromCamera(mouse, camera);
+
+      if (raycaster.ray.intersectPlane(dragPlane, planeHit)) {
+        const next = planeHit.clone().add(dragOffset);
+
+        // preserve Y
+        next.y = draggedGroup.position.y;
+
+        // ✅ prevent crossing room boundaries
+        clampToRoomWithExtents(draggedGroup, next);
+
+        draggedGroup.position.copy(next);
+      }
+    };
+
+    const finishDrag = () => {
+      if (!isDragging || !draggedGroup) return;
+
+      const id = draggedGroup.userData.__designItemId;
+      const newX = Number(draggedGroup.position.x.toFixed(3));
+      const newZ = Number(draggedGroup.position.z.toFixed(3));
+
+      updateItem(id, { x: newX, z: newZ });
+
+      isDragging = false;
+      draggedGroup = null;
+      controls.enabled = true;
+    };
+
+    renderer.domElement.addEventListener("pointerdown", onPointerDown);
+    renderer.domElement.addEventListener("pointermove", onPointerMove);
+    renderer.domElement.addEventListener("pointerup", finishDrag);
+    renderer.domElement.addEventListener("pointercancel", finishDrag);
+    renderer.domElement.addEventListener("pointerleave", finishDrag);
+
     // === LOAD FURNITURE ===
     const loader = new GLTFLoader();
 
-    console.log("=== 3D VIEWER ===");
-    console.log(`Room: ${room.width}m x ${room.length}m x ${room.height}m`);
-    console.log(`Items to load: ${items.length}`);
-
-    items.forEach((item, index) => {
+    items.forEach((item) => {
       const modelData = getModelById(item.modelId);
-      if (!modelData) {
-        console.warn(`[${index}] Model not found: ${item.modelId}`);
-        return;
-      }
-
-      console.log(`[${index}] Loading ${modelData.name} | 2D pos: x=${item.x.toFixed(2)}, z=${item.z.toFixed(2)}`);
+      if (!modelData) return;
 
       loader.load(
         modelData.modelPath,
         (gltf) => {
           const model = gltf.scene;
 
-          // --- Step 1: Measure raw model ---
           const rawBox = new THREE.Box3().setFromObject(model);
           const rawSize = new THREE.Vector3();
           const rawCenter = new THREE.Vector3();
           rawBox.getSize(rawSize);
           rawBox.getCenter(rawCenter);
 
-          console.log(`  Raw size: w=${rawSize.x.toFixed(2)}, h=${rawSize.y.toFixed(2)}, d=${rawSize.z.toFixed(2)}`);
-
-          // --- Step 2: Calculate auto-scale to match desired size ---
           const desiredW = modelData.size.w;
           const desiredH = modelData.size.h;
           const desiredD = modelData.size.d;
 
-          // Scale each axis to fit desired dimensions, use uniform (smallest) scale
           const scaleForW = desiredW / rawSize.x;
           const scaleForH = desiredH / rawSize.y;
           const scaleForD = desiredD / rawSize.z;
           const autoScale = Math.min(scaleForW, scaleForH, scaleForD);
 
-          // Apply item.scale on top (user scaling from editor)
           const finalScale = autoScale * item.scale;
 
-          // --- Step 3: Recenter model ---
-          // Move model so its bottom-center is at (0, 0, 0)
           model.position.set(-rawCenter.x, -rawBox.min.y, -rawCenter.z);
 
-          // --- Step 4: Wrap in group ---
           const group = new THREE.Group();
           group.add(model);
           group.scale.set(finalScale, finalScale, finalScale);
 
-          // --- Step 5: Position in room ---
-          // X and Z come directly from 2D editor (in meters)
-          // Y depends on category:
-          //   - lighting: hang from ceiling
-          //   - everything else: sit on floor (y=0)
           let yPos = 0;
           if (modelData.category === "lighting") {
-            // Hang from ceiling: room height minus scaled model height
             const scaledHeight = rawSize.y * finalScale;
             yPos = room.height - scaledHeight;
           }
 
           group.position.set(item.x, yPos, item.z);
 
-          // --- Step 6: Rotation ---
           group.rotation.y =
-            THREE.MathUtils.degToRad(item.rotation) +
-            modelData.defaultRotationY;
+            THREE.MathUtils.degToRad(item.rotation) + modelData.defaultRotationY;
 
-          // --- Step 7: Shadows ---
           group.traverse((child) => {
             if (child.isMesh) {
               child.castShadow = true;
@@ -209,27 +280,32 @@ export default function Viewer3D() {
             }
           });
 
-          scene.add(group);
+          group.userData.__designItemId = item.id;
 
-          // --- Debug ---
-          const scaledW = (rawSize.x * finalScale).toFixed(2);
-          const scaledH = (rawSize.y * finalScale).toFixed(2);
-          const scaledD = (rawSize.z * finalScale).toFixed(2);
-          console.log(
-            `  ✓ ${modelData.name} | ` +
-            `3D pos(${group.position.x.toFixed(2)}, ${group.position.y.toFixed(2)}, ${group.position.z.toFixed(2)}) | ` +
-            `autoScale=${autoScale.toFixed(4)} finalScale=${finalScale.toFixed(4)} | ` +
-            `scaled size(${scaledW}, ${scaledH}, ${scaledD})`
-          );
+          // ✅ NEW: compute footprint extents in world space for boundary clamping
+          // Use the group's bounding box (after scaling/centering) and store half-extents.
+          const groupBox = new THREE.Box3().setFromObject(group);
+          const groupSize = new THREE.Vector3();
+          groupBox.getSize(groupSize);
+          group.userData.__halfExtentsXZ = {
+            x: groupSize.x / 2,
+            z: groupSize.z / 2,
+          };
+
+          // Optional: if the loaded position is already out-of-bounds, clamp it once
+          const clamped = group.position.clone();
+          clampToRoomWithExtents(group, clamped);
+          group.position.copy(clamped);
+
+          scene.add(group);
         },
         undefined,
         (error) => {
-          console.error(`  ✗ Error loading ${modelData.name}:`, error);
+          console.error(`Error loading ${modelData.name}:`, error);
         }
       );
     });
 
-    // Resize
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -237,7 +313,6 @@ export default function Viewer3D() {
     };
     window.addEventListener("resize", handleResize);
 
-    // Animate
     let animationId;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
@@ -246,9 +321,15 @@ export default function Viewer3D() {
     };
     animate();
 
-    // Cleanup
     return () => {
       window.removeEventListener("resize", handleResize);
+
+      renderer.domElement.removeEventListener("pointerdown", onPointerDown);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerup", finishDrag);
+      renderer.domElement.removeEventListener("pointercancel", finishDrag);
+      renderer.domElement.removeEventListener("pointerleave", finishDrag);
+
       cancelAnimationFrame(animationId);
       controls.dispose();
       renderer.dispose();
@@ -259,7 +340,7 @@ export default function Viewer3D() {
         mountRef.current.removeChild(renderer.domElement);
       }
     };
-  }, [room, items]);
+  }, [room, items, updateItem]);
 
   return (
     <div style={{ position: "relative" }}>
