@@ -13,6 +13,7 @@ import AdminDashboard from './admin/dashboard.jsx';
 import Users from './admin/users';
 import Items from './admin/items.jsx';
 import Requests from './admin/requests.jsx';
+import AdminReviews from './admin/reviews.jsx';
 import DesignWorkspace from './admin/design.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
@@ -22,6 +23,7 @@ import Profile from './pages/profile.jsx';
 import CartPage from './pages/cart.jsx';
 import Furniture from './pages/furniture.jsx';
 import SavedDesigns from './pages/SavedDesigns.jsx'; // <-- Add this import
+import Reviews from './pages/ReviewPage.jsx';
 
 function App() {
   return (
@@ -38,7 +40,9 @@ function App() {
             <Route path="users" element={<Users />} />
             <Route path="items" element={<Items />} />
             <Route path="requests" element={<Requests />} />
+            <Route path="reviews" element={<AdminReviews />} />
             <Route path="design" element={<DesignWorkspace />} />
+
           </Route>
 
           {/* User Section */}
@@ -63,6 +67,9 @@ function App() {
           } />
           <Route path="/saved-designs" element={
             <SavedDesigns /> 
+          } />
+          <Route path="/reviews" element={
+            <Reviews />
           } />
           <Route path="/profile" element={
             <Profile />

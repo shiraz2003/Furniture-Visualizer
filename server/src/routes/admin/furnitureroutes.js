@@ -36,6 +36,7 @@ const upload = multer({
 
 // API Routes
 router.post("/add", upload.single("glbFile"), addFurniture);
+router.get("/", getFurniture);
 router.get("/all", getFurniture);
 router.delete("/delete/:id", deleteFurniture); 
 router.put("/update/:id", upload.single("glbFile"), updateFurniture);

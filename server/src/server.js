@@ -9,6 +9,7 @@ import adminRoutes from './routes/admin/userroutes.js';
 import furnitureRoutes from './routes/admin/furnitureroutes.js'; // අලුතින් එක් කළ Furniture Routes
 import orderRoutes from './routes/orderroutes.js'; // Order Routes එක් කළා
 import designRoutes from './routes/designRoutes.js'; // <-- Add this import
+import reviewRoutes from './routes/reviews.js'; // Review Routes එක් කළා
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use('/api/admin', orderRoutes); // Order Routes එක් කළා
 app.use('/api/auth', userRouter);
 app.use('/api/furniture', furnitureRoutes); // අලුත් Furniture API එක මෙතැනින් වැඩ කරයි
 app.use('/api/designs', designRoutes); // <-- Mount the new design routes here
+app.use('/api/reviews', reviewRoutes); // Review Routes එක් කළා
 
 const connectionString = process.env.MONGO_URI;
 mongoose.connect(connectionString)

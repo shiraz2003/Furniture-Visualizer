@@ -68,6 +68,12 @@ export default function Header() {
           >
             Design
           </Link>
+          <Link
+            to="/reviews"
+            className="font-montserrat font-normal text-[18px] leading-[22px] text-white hover:opacity-80 transition-opacity"
+          >
+            Reviews
+          </Link>
            <Link
             to="/profile"
             className="font-montserrat font-normal text-[18px] leading-[22px] text-white hover:opacity-80 transition-opacity"
