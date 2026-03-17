@@ -3,7 +3,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Toaster } from 'react-hot-toast';
 import { DesignProvider } from './context/DesignContext';
 
-import Login from './pages/login.jsx';
+import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import RoomSetup from './pages/RoomSetup.jsx';
 import Editor2D from './pages/Editor2D.jsx';
