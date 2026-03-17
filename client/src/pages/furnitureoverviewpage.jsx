@@ -12,7 +12,6 @@ export default function FurnitureOverviewPage() {
     const [item, setItem] = useState(null);
     const [status, setStatus] = useState("loading");
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [isInCart, setIsInCart] = useState(false);
     const [quantity, setQuantity] = useState(1);
 
     useEffect(() => {
@@ -64,10 +63,8 @@ export default function FurnitureOverviewPage() {
                 const existing = cart.find((cartItem) => cartItem._id === furniture?._id);
 
                 if (existing) {
-                    setIsInCart(true);
                     setQuantity(existing.quantity || 1);
                 } else {
-                    setIsInCart(false);
                     setQuantity(1);
                 }
 
@@ -87,16 +84,12 @@ export default function FurnitureOverviewPage() {
     useEffect(() => {
         const syncCartState = () => {
             const cart = JSON.parse(localStorage.getItem("furnitureCart")) || [];
-            if (!item) {
-                return;
-            }
+            if (!item) return;
 
             const existing = cart.find((cartItem) => cartItem._id === item._id);
             if (existing) {
-                setIsInCart(true);
                 setQuantity(existing.quantity || 1);
             } else {
-                setIsInCart(false);
                 setQuantity(1);
             }
         };
@@ -108,15 +101,8 @@ export default function FurnitureOverviewPage() {
     }, [item]);
 
     const imageList = useMemo(() => {
-        if (!item?.image) {
-            return [];
-        }
-
-        if (Array.isArray(item.image)) {
-            return item.image.filter(Boolean);
-        }
-
-        return [item.image];
+        if (!item?.image) return [];
+        return Array.isArray(item.image) ? item.image.filter(Boolean) : [item.image];
     }, [item]);
 
     const totalPrice = (item?.price || 0) * quantity;
@@ -128,9 +114,7 @@ export default function FurnitureOverviewPage() {
             return;
         }
 
-        if (!item) {
-            return;
-        }
+        if (!item) return;
 
         const cart = JSON.parse(localStorage.getItem("furnitureCart")) || [];
         const existingIndex = cart.findIndex((cartItem) => cartItem._id === item._id);
@@ -144,7 +128,6 @@ export default function FurnitureOverviewPage() {
         }
 
         localStorage.setItem("furnitureCart", JSON.stringify(cart));
-        setIsInCart(true);
         window.dispatchEvent(new Event("cartUpdated"));
     };
 
@@ -163,7 +146,6 @@ export default function FurnitureOverviewPage() {
         <div className="min-h-screen bg-[#fbfbfe] text-[#050315] font-sans selection:bg-[#2f27ce] selection:text-white">
             <Navbar />
 
-            {/* Main Content Area - pt-24 pushes content below Navbar */}
             <div className="w-full h-[calc(100vh-80px)] overflow-y-auto scrollbar-hide pt-24 pb-12 px-4 sm:px-6 md:px-8">
                 
                 {status === "loading" && (
@@ -182,19 +164,14 @@ export default function FurnitureOverviewPage() {
 
                 {status === "success" && item && (
                     <div className="max-w-7xl mx-auto animate-in fade-in duration-500">
-                        {/* Grid: 1 col on mobile, 2 col on large screens */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
                             
-                            {/* Left Side: Image Slider */}
-                            {/* Mobile: Reduce padding to 2, Web: padding 5 */}
                             <div className="bg-white rounded-3xl p-2 sm:p-5 border border-[#dedcff]/50 shadow-[0_8px_30px_rgb(5,3,21,0.04)]">
                                 <ImageSlider images={imageList} />
                             </div>
 
-                            {/* Right Side: Details & Actions */}
                             <div className="space-y-6">
                                 
-                                {/* 1. Details Card */}
                                 <div className="bg-white rounded-2xl p-6 sm:p-7 border border-[#dedcff]/50 shadow-[0_8px_30px_rgb(5,3,21,0.04)]">
                                     <h1 className="text-2xl sm:text-3xl font-black text-[#050315] mb-3 tracking-tight">
                                         {item.name}
@@ -203,13 +180,12 @@ export default function FurnitureOverviewPage() {
                                         {item.category}
                                     </span>
                                     {item.description?.trim() && (
-                                        <p className="text-[#050315]/70 mt-5 leading-relaxed whitespace-pre-line text-sm sm:text-base font-medium wrap-break-word whitespace-pre-line max-h-36 overflow-y-auto pr-1">
+                                        <p className="text-[#050315]/70 mt-5 leading-relaxed text-sm sm:text-base font-medium wrap-break-word whitespace-pre-line max-h-36 overflow-y-auto pr-1">
                                             {item.description}
                                         </p>
                                     )}
                                 </div>
 
-                                {/* 2. Pricing Card */}
                                 <div className="bg-white rounded-2xl p-6 sm:p-7 border border-[#dedcff]/50 shadow-[0_8px_30px_rgb(5,3,21,0.04)]">
                                     <h3 className="text-[11px] font-black text-[#050315]/50 uppercase tracking-widest mb-2">Pricing</h3>
                                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -219,12 +195,11 @@ export default function FurnitureOverviewPage() {
                                         <p className="text-[#050315]/40 text-xs font-bold">Base unit price</p>
                                     </div>
 
-                                    {/* Quantity Selector */}
                                     <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 border border-[#dedcff] rounded-xl p-1.5 ">
                                         <label className="text-[11px] font-black uppercase tracking-widest text-[#050315]/50 ">
                                             Quantity
                                         </label>
-                                        <div className="flex items-center gap-3 bg-[#fbfbfe]  ">
+                                        <div className="flex items-center gap-3 bg-[#fbfbfe]">
                                             <button
                                                 onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
                                                 className="w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-[#dedcff] text-[#2f27ce] font-black text-xl hover:bg-[#dedcff] active:scale-95 transition-all"
@@ -253,7 +228,6 @@ export default function FurnitureOverviewPage() {
                                         </div>
                                     </div>
 
-                                    {/* Total Price */}
                                     <div className="mt-6 border-t border-[#dedcff]/50 pt-5">
                                         <p className="text-[11px] font-black text-[#050315]/50 uppercase tracking-widest mb-1">Total Price</p>
                                         <p className="text-xl font-black text-[#050315]">
@@ -262,10 +236,8 @@ export default function FurnitureOverviewPage() {
                                     </div>
                                 </div>
 
-                                {/* 3. Actions Card */}
                                 <div className="bg-white rounded-2xl p-6 border border-[#dedcff]/50 shadow-[0_8px_30px_rgb(5,3,21,0.04)]">
                                     <h3 className="text-[11px] font-black text-[#050315]/50 uppercase tracking-widest mb-4">Actions</h3>
-                                    {/* Web Layout and Responsive adjustments */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
                                         <button
                                             onClick={handleBuyNow}

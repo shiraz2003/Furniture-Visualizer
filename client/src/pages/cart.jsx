@@ -45,8 +45,7 @@ export default function Cart() {
         try {
             const items = JSON.parse(localStorage.getItem('furnitureCart')) || [];
             setCartItems(items);
-        } catch (error) {
-            console.error('Error loading cart:', error);
+        } catch {
             toast.error('Failed to load cart items');
         } finally {
             setLoading(false);
@@ -62,7 +61,7 @@ export default function Cart() {
             setCartItems(updatedItems);
             localStorage.setItem('furnitureCart', JSON.stringify(updatedItems));
             window.dispatchEvent(new Event('cartUpdated'));
-        } catch (error) {
+        } catch {
             toast.error('Failed to update quantity');
         }
     };
@@ -74,7 +73,7 @@ export default function Cart() {
             localStorage.setItem('furnitureCart', JSON.stringify(updatedItems));
             toast.success(`${itemName} removed`);
             window.dispatchEvent(new Event('cartUpdated'));
-        } catch (error) {
+        } catch {
             toast.error('Failed to remove item');
         }
     };
@@ -85,7 +84,7 @@ export default function Cart() {
             setCartItems([]);
             toast.success('Cart cleared');
             window.dispatchEvent(new Event('cartUpdated'));
-        } catch (error) {
+        } catch {
             toast.error('Failed to clear cart');
         }
     };
@@ -150,7 +149,7 @@ export default function Cart() {
             setShowOrderForm(false);
             toast.success('Order submitted successfully!');
             window.dispatchEvent(new Event('cartUpdated'));
-        } catch (error) {
+        } catch {
             toast.error('Failed to submit order.');
         } finally {
             setSubmittingOrder(false);
@@ -174,7 +173,7 @@ export default function Cart() {
             <Navbar />
             
             <div className="container mx-auto px-4 pt-32 pb-20 max-w-6xl">
-                {/* Header */}
+                {/* Header Section */}
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
                     <div>
                         <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 flex items-center gap-3">
@@ -207,12 +206,10 @@ export default function Cart() {
                             {cartItems.map((item) => (
                                 <div key={item._id} className="bg-white rounded-3xl p-5 border border-[#dedcff]/50 shadow-sm hover:shadow-md transition-all group">
                                     <div className="flex flex-col sm:flex-row gap-6">
-                                        {/* Product Image */}
                                         <div className="w-full sm:w-32 h-32 flex-shrink-0 bg-[#fbfbfe] rounded-2xl overflow-hidden border border-[#dedcff]/30">
                                             <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                                         </div>
                                         
-                                        {/* Product Details */}
                                         <div className="flex-1 flex flex-col justify-between">
                                             <div className="flex justify-between items-start">
                                                 <div>
@@ -227,7 +224,6 @@ export default function Cart() {
                                             </div>
 
                                             <div className="flex flex-wrap items-end justify-between gap-4 mt-4">
-                                                {/* Quantity controls */}
                                                 <div className="flex items-center gap-4 bg-[#fbfbfe] px-3 py-2 rounded-xl border border-[#dedcff]">
                                                     <button onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)} disabled={item.quantity <= 1} className="text-[#2f27ce] disabled:text-[#dedcff] transition-colors"><FaMinus size={12}/></button>
                                                     <span className="font-black text-[#050315] min-w-[20px] text-center">{item.quantity}</span>
@@ -289,7 +285,6 @@ export default function Cart() {
                             </div>
                             
                             <form onSubmit={handleSubmitOrder} className="space-y-6">
-                                {/* Customer Info */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-[#050315]/40 ml-1">Full Name</label>
