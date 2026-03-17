@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
   IoLogOutOutline,
@@ -10,7 +10,6 @@ import {
 import toast from "react-hot-toast";
 
 export default function Header() {
-  // 1. Initial state එකේදීම token එක පරීක්ෂා කිරීමෙන් useEffect error එක විසඳේ
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return !!localStorage.getItem("token");
   });
@@ -18,13 +17,18 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
+  
+  // 1. Get current path location
+  const location = useLocation();
+
+  // 2. Check if the current page is Home (Dashboard)
+  const isHomePage = location.pathname === "/dashboard" || location.pathname === "/";
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
 
-    // 2. Disable scroll logic
     if (isMobileMenuOpen) {
       document.body.style.overflow = "hidden";
     } else {
@@ -54,18 +58,25 @@ export default function Header() {
     { name: "Profile", path: "/profile" },
   ];
 
+  // 3. Logic to determine text color and background
+  // - Text is dark if: Mobile menu is open, OR it's scrolled, OR it's NOT the Home page
+  const isDarkText = isScrolled || isMobileMenuOpen || !isHomePage;
+  const textColorClass = isDarkText ? "text-slate-900" : "text-white";
+
+  // - Background is white if: it's scrolled, OR it's NOT the Home page
+  const isWhiteBg = isScrolled || !isHomePage;
+  const bgClass = isWhiteBg ? "bg-white shadow-md" : "bg-transparent";
+
   return (
     <nav 
-      className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-300 ${
-        isScrolled ? "bg-black/50 backdrop-blur-md" : "bg-transparent"
-      }`}
+      className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-300 ${bgClass}`}
     >
       <div className="max-w-[1440px] mx-auto h-[70px] flex items-center justify-between px-6 lg:px-[80px]">
         
         {/* Logo */}
         <Link to="/dashboard" className="flex items-center group z-[110]">
-          <span className="text-2xl font-bold text-white tracking-tight">
-            Inter<span className="text-[#FFB800]">io.</span>
+          <span className={`text-2xl font-bold tracking-tight transition-colors duration-300 ${textColorClass}`}>
+            Design<span className="text-[#FBBF24]">Lab</span>
           </span>
         </Link>
 
@@ -75,7 +86,7 @@ export default function Header() {
             <Link
               key={link.name}
               to={link.path}
-              className="font-medium text-[15px] text-white hover:text-[#FFB800] transition-colors"
+              className={`font-medium text-[15px] hover:text-[#FBBF24] transition-colors duration-300 ${textColorClass}`}
             >
               {link.name}
             </Link>
@@ -83,35 +94,35 @@ export default function Header() {
         </div>
 
         {/* Right Icons */}
-        <div className="flex items-center gap-4 text-white z-[110]">
+        <div className={`flex items-center gap-4 z-[110] transition-colors duration-300 ${textColorClass}`}>
           <div className="hidden lg:flex items-center gap-4">
             {isLoggedIn ? (
-              <button onClick={handleLogout} className="hover:text-[#FFB800] transition-colors">
+              <button onClick={handleLogout} className="hover:text-[#FBBF24] transition-colors">
                 <IoLogOutOutline size={22} />
               </button>
             ) : (
-              <Link to="/login" className="hover:text-[#FFB800] transition-colors">
+              <Link to="/login" className="hover:text-[#FBBF24] transition-colors">
                 <IoPersonOutline size={20} />
               </Link>
             )}
           </div>
-          <Link to="/cart" className="hover:text-[#FFB800] transition-colors">
+          <Link to="/cart" className="hover:text-[#FBBF24] transition-colors">
             <IoBagHandleOutline size={22} />
           </Link>
 
-          {/* Hamburger Menu */}
+          {/* Hamburger Menu Toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-1 text-white"
+            className="lg:hidden p-1 transition-colors hover:text-[#FBBF24]"
           >
             {isMobileMenuOpen ? <IoCloseOutline size={28} /> : <IoMenuOutline size={28} />}
           </button>
         </div>
       </div>
 
-      {/* Full Screen Mobile Menu Overlay */}
+      {/* Full Screen Mobile Menu Overlay (White Background) */}
       <div 
-        className={`lg:hidden fixed inset-0 w-full h-screen bg-black transition-all duration-500 ease-in-out z-[105] ${
+        className={`lg:hidden fixed inset-0 w-full h-screen bg-white transition-all duration-500 ease-in-out z-[105] ${
           isMobileMenuOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
         }`}
       >
@@ -122,7 +133,7 @@ export default function Header() {
               <Link
                 key={link.name}
                 to={link.path}
-                className="text-white text-3xl font-bold tracking-tight active:text-[#FFB800]"
+                className="text-slate-900 text-3xl font-bold tracking-tight hover:text-[#FBBF24] active:text-[#FBBF24] transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {link.name}
@@ -130,23 +141,23 @@ export default function Header() {
             ))}
           </div>
 
-          {/* Logout Section at the Bottom */}
-          <div className="mt-auto pt-8 border-t border-white/10">
+          {/* Logout/Account Section at the Bottom */}
+          <div className="mt-auto pt-8 border-t border-slate-200">
             {isLoggedIn ? (
               <button 
                 onClick={handleLogout}
-                className="flex items-center gap-4 text-[#FFB800] text-2xl font-bold"
+                className="flex items-center gap-4 text-slate-900 text-2xl font-bold hover:text-[#FBBF24] transition-colors"
               >
-                <IoLogOutOutline size={32} />
+                <IoLogOutOutline size={32} className="text-[#FBBF24]" />
                 Logout
               </button>
             ) : (
               <Link 
                 to="/login"
-                className="flex items-center gap-4 text-[#FFB800] text-2xl font-bold"
+                className="flex items-center gap-4 text-slate-900 text-2xl font-bold hover:text-[#FBBF24] transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <IoPersonOutline size={32} />
+                <IoPersonOutline size={32} className="text-[#FBBF24]" />
                 Account
               </Link>
             )}

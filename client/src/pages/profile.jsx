@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '../components/Navbar.jsx';
-import { FaChair } from 'react-icons/fa';
-import { MdOutlineChair } from 'react-icons/md';
-import { PiArmchairFill } from 'react-icons/pi';
+import { FaChair, FaUserCircle, FaHistory, FaDraftingCompass, FaEnvelope, FaPhone, FaSearch } from 'react-icons/fa';
+import { MdOutlineChair, MdOutlineBedroomParent } from 'react-icons/md';
+import { PiArmchairFill, PiWall } from 'react-icons/pi';
 import { TfiMoney } from 'react-icons/tfi';
 import { TbTax } from 'react-icons/tb';
-import { MdOutlineBedroomParent } from 'react-icons/md';
-import { PiWall } from 'react-icons/pi';
 import api from '../services/api.js';
 import { useDesign } from '../context/DesignContext.jsx';
 
@@ -17,7 +15,6 @@ export default function Profile() {
         lastname: '',
         email: '',
         phone: '',
-        
     });
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -80,22 +77,13 @@ export default function Profile() {
             const filterDate = new Date(today);
             
             switch (selectedDateRange) {
-                case 'last7days':
-                    filterDate.setDate(today.getDate() - 7);
-                    break;
-                case 'last30days':
-                    filterDate.setDate(today.getDate() - 30);
-                    break;
-                case 'last3months':
-                    filterDate.setMonth(today.getMonth() - 3);
-                    break;
-                default:
-                    filterDate.setFullYear(today.getFullYear() - 10); // Show all
+                case 'last7days': filterDate.setDate(today.getDate() - 7); break;
+                case 'last30days': filterDate.setDate(today.getDate() - 30); break;
+                case 'last3months': filterDate.setMonth(today.getMonth() - 3); break;
+                default: filterDate.setFullYear(today.getFullYear() - 10);
             }
         
-            filtered = filtered.filter(order => 
-                new Date(order.orderDate) >= filterDate
-            );
+            filtered = filtered.filter(order => new Date(order.orderDate) >= filterDate);
         }
 
         setFilteredOrders(filtered);
@@ -107,18 +95,13 @@ export default function Profile() {
             setError('');
             const response = await axios.get(
                 import.meta.env.VITE_BACKEND_URL + '/api/auth/profile',
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`
-                    }
-                }
+                { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
             );
             setUserProfile({
                 firstname: response.data.firstname || '',
                 lastname: response.data.lastname || '',
                 email: response.data.email || '',
                 phone: response.data.phone || '',
-             
             });
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -138,11 +121,7 @@ export default function Profile() {
             const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
             const response = await axios.get(
                 `${apiUrl}/api/admin/orders/customer/${encodeURIComponent(userProfile.email)}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`
-                    }
-                }
+                { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
             );
             setUserOrders(response.data.data.orders || []);
             setFilteredOrders(response.data.data.orders || []);
@@ -157,13 +136,10 @@ export default function Profile() {
     const fetchUserDesigns = async () => {
         try {
             setDesignsLoading(true);
-            // don't clear a profile error if one already set; only clear design-specific errors
-
             const res = await api.get('/designs');
             setUserDesigns(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error('Error fetching designs:', err);
-            // don't override more important errors (like profile load)
             setError(prev => prev || 'Failed to load saved designs');
         } finally {
             setDesignsLoading(false);
@@ -177,92 +153,75 @@ export default function Profile() {
         window.location.href = '/viewer-3d';
     };
 
-    // Get unique statuses for filter dropdown
     const getOrderStatuses = () => {
         const statuses = userOrders.map(order => order.status).filter(Boolean);
         return [...new Set(statuses)];
     };
 
-    // Clear all search and filter criteria
     const clearFilters = () => {
         setSearchTerm('');
         setSelectedStatus('');
         setSelectedDateRange('');
     };
 
+    // Updated status colors to match your theme
     const getStatusColor = (status) => {
         const colors = {
-            pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-            confirmed: 'bg-blue-100 text-blue-800 border-blue-200',
-            processing: 'bg-purple-100 text-purple-800 border-purple-200',
-            shipping: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-            delivered: 'bg-green-100 text-green-800 border-green-200',
-            cancelled: 'bg-red-100 text-red-800 border-red-200'
+            pending: 'bg-[#dedcff] text-[#2f27ce] border-[#433bff]/20',
+            confirmed: 'bg-[#433bff]/10 text-[#433bff] border-[#433bff]/30',
+            processing: 'bg-[#2f27ce]/10 text-[#2f27ce] border-[#2f27ce]/30',
+            shipping: 'bg-[#dedcff] text-[#433bff] border-[#dedcff]',
+            delivered: 'bg-[#050315]/10 text-[#050315] border-[#050315]/20',
+            cancelled: 'bg-rose-100 text-rose-800 border-rose-200' // kept red for cancellation alert
         };
-        return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+        return colors[status] || 'bg-[#fbfbfe] text-[#050315] border-[#dedcff]';
     };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setUserProfile(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setUserProfile(prev => ({ ...prev, [name]: value }));
         setError('');
         setSuccessMessage('');
     };
 
     const validateForm = () => {
         const { firstname, lastname, email, phone } = userProfile;
-        
         if (!firstname || !lastname || !email || !phone) {
             setError('Please fill in all required fields');
             return false;
         }
-
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             setError('Please enter a valid email address');
             return false;
         }
-
         const phoneRegex = /^\d{10,}$/;
         if (!phoneRegex.test(phone.replace(/\D/g, ''))) {
             setError('Please enter a valid phone number (at least 10 digits)');
             return false;
         }
-
         return true;
     };
 
     const handleSave = async () => {
         if (!validateForm()) return;
-
         try {
             setSaving(true);
             setError('');
             setSuccessMessage('');
-
             const response = await axios.put(
                 import.meta.env.VITE_BACKEND_URL + '/api/auth/profile', 
                 userProfile,
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`
-                    }
-                }
+                { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
             );
             setSuccessMessage('Profile updated successfully!');
             setIsEditing(false);
-            
-            // Update profile with response data
             if (response.data.user) {
                 setUserProfile({
                     firstname: response.data.user.firstname || '',
                     lastname: response.data.user.lastname || '',
                     email: response.data.user.email || '',
                     phone: response.data.user.phone || '',
-                    
                 });
             }
         } catch (error) {
@@ -277,498 +236,200 @@ export default function Profile() {
         setIsEditing(false);
         setError('');
         setSuccessMessage('');
-        fetchUserProfile(); // Reset to original values
+        fetchUserProfile();
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="bg-white p-8 rounded-lg shadow-md">
-                    <div className="animate-pulse space-y-4">
-                        <div className="h-8 bg-gray-200 rounded w-48"></div>
-                        <div className="h-4 bg-gray-200 rounded w-32"></div>
-                    </div>
-                </div>
+            <div className="min-h-screen bg-[#fbfbfe] flex items-center justify-center">
+                <div className="w-16 h-16 border-4 border-[#dedcff] border-t-[#2f27ce] rounded-full animate-spin"></div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-              <Navbar />
-        
-        <div className="min-h-screen bg-gray-50 py-8 overflow-y-auto scrollbar-hide">
-            <div className="container mx-auto px-4 max-w-7xl">
+        <div className="min-h-screen bg-[#fbfbfe] text-[#050315] font-sans selection:bg-[#2f27ce] selection:text-[#fbfbfe]">
+            <Navbar />
+            
+            <div className="pt-32 pb-20 container mx-auto px-6 max-w-7xl">
                 
-                {/* Page Header */}
-                <div className="mb-8 text-center">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">User Dashboard</h1>
-                    <p className="text-gray-600">Manage your account and view order history</p>
+                {/* Profile Hero Section */}
+                <div className="relative mb-12 bg-[#2f27ce] rounded-[2rem] p-8 md:p-12 text-[#fbfbfe] overflow-hidden shadow-2xl shadow-[#2f27ce]/20">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#433bff] opacity-50 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                        <div className="w-32 h-32 bg-[#fbfbfe]/10 backdrop-blur-md rounded-full flex items-center justify-center border border-[#dedcff]/20 shadow-inner">
+                            <FaUserCircle size={80} className="text-[#dedcff]" />
+                        </div>
+                        <div className="text-center md:text-left flex-1">
+                            <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-2 text-[#fbfbfe]">
+                                Hello, {userProfile.firstname || 'User'}!
+                            </h1>
+                            <p className="text-[#dedcff] font-medium opacity-90 uppercase tracking-widest text-sm">
+                                Manage your account & orders
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Error Message */}
-                {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-red-600">{error}</p>
-                    </div>
-                )}
+                {error && <div className="mb-8 p-5 bg-rose-50 text-rose-700 rounded-2xl border border-rose-200 font-medium">{error}</div>}
+                {successMessage && <div className="mb-8 p-5 bg-[#dedcff] text-[#2f27ce] rounded-2xl border border-[#433bff]/20 font-medium">{successMessage}</div>}
 
-                {/* Success Message */}
-                {successMessage && (
-                    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-green-600">{successMessage}</p>
-                    </div>
-                )}
-
-                <div className="space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                     
-                    {/* Profile Information Section */}
-                    <div className="bg-white rounded-lg shadow-md border border-gray-200">
-                        {/* Profile Header */}
-                        <div className="bg-blue-600 px-6 py-4 rounded-t-lg">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold text-white">Profile Information</h2>
+                    {/* Left Column: Personal Info */}
+                    <div className="lg:col-span-1 space-y-8">
+                        <div className="bg-white rounded-3xl p-8 shadow-xl shadow-[#050315]/5 border border-[#dedcff]/50">
+                            <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#dedcff]/50">
+                                <h2 className="text-xl font-black flex items-center gap-3 text-[#050315]">
+                                    <FaUserCircle className="text-[#433bff]" /> Profile Details
+                                </h2>
                                 {!isEditing && (
-                                    <button
-                                        onClick={() => setIsEditing(true)}
-                                        className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors duration-200 flex items-center gap-2"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Edit Profile
+                                    <button onClick={() => setIsEditing(true)} className="text-xs font-bold text-[#2f27ce] bg-[#dedcff] px-4 py-2 rounded-full hover:bg-[#433bff] hover:text-[#fbfbfe] transition-colors">
+                                        Edit
                                     </button>
                                 )}
                             </div>
-                        </div>
 
-                        {/* Profile Form */}
-                        <div className="p-6">
                             <div className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* First Name */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            First Name *
-                                        </label>
+                                {[
+                                    { label: 'First Name', name: 'firstname', type: 'text' },
+                                    { label: 'Last Name', name: 'lastname', type: 'text' },
+                                    { label: 'Email Address', name: 'email', type: 'email' },
+                                    { label: 'Phone Number', name: 'phone', type: 'tel' }
+                                ].map((field) => (
+                                    <div key={field.name}>
+                                        <label className="text-[11px] font-black text-[#050315]/50 uppercase tracking-widest mb-2 block ml-1">{field.label}</label>
                                         <input
-                                            type="text"
-                                            name="firstname"
-                                            value={userProfile.firstname}
+                                            type={field.type}
+                                            name={field.name}
+                                            value={userProfile[field.name]}
                                             onChange={handleInputChange}
                                             disabled={!isEditing}
-                                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${!isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
-                                            placeholder="Enter your first name"
+                                            className={`w-full px-4 py-3.5 rounded-xl border-2 transition-all font-bold text-sm outline-none ${!isEditing ? 'bg-[#fbfbfe] border-transparent text-[#050315]/70 cursor-not-allowed' : 'bg-white border-[#dedcff] text-[#050315] focus:border-[#2f27ce] focus:ring-4 focus:ring-[#dedcff]/50'}`}
                                         />
                                     </div>
-
-                                    {/* Last Name */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Last Name *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="lastname"
-                                            value={userProfile.lastname}
-                                            onChange={handleInputChange}
-                                            disabled={!isEditing}
-                                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${!isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
-                                            placeholder="Enter your last name"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Email */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Email Address *
-                                    </label>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={userProfile.email}
-                                        onChange={handleInputChange}
-                                        disabled={!isEditing}
-                                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${!isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
-                                        placeholder="Enter your email address"
-                                    />
-                                </div>
-
-                                {/* Phone */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Phone Number *
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        name="phone"
-                                        value={userProfile.phone}
-                                        onChange={handleInputChange}
-                                        disabled={!isEditing}
-                                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${!isEditing ? 'bg-gray-50 cursor-not-allowed' : ''}`}
-                                        placeholder="Enter your phone number"
-                                    />
-                                </div>
-
-                                {/* Action Buttons */}
+                                ))}
                                 {isEditing && (
-                                    <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
-                                        <button
-                                            onClick={handleCancel}
-                                            disabled={saving}
-                                            className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
-                                        >
+                                    <div className="flex gap-4 pt-6">
+                                        <button onClick={handleSave} disabled={saving} className="flex-1 py-3.5 bg-[#2f27ce] text-[#fbfbfe] font-bold rounded-xl shadow-lg shadow-[#2f27ce]/30 hover:bg-[#433bff] active:scale-95 transition-all">
+                                            {saving ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                        <button onClick={handleCancel} className="flex-1 py-3.5 bg-white text-[#050315] border-2 border-[#dedcff] font-bold rounded-xl hover:bg-[#fbfbfe] transition-all">
                                             Cancel
                                         </button>
-                                        <button
-                                            onClick={handleSave}
-                                            disabled={saving}
-                                            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
-                                        >
-                                            {saving ? (
-                                                <span className="flex items-center">
-                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                    </svg>
-                                                    Saving...
-                                                </span>
-                                            ) : (
-                                                'Save Changes'
-                                            )}
-                                        </button>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
-                    
-                    {/* Order History Section */}
-                    <div className="bg-white rounded-lg shadow-md border border-gray-200">
-                        {/* Order History Header */}
-                        <div className="bg-green-800 px-6 py-4 rounded-t-lg">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                <h2 className="text-xl font-bold text-white">Order History</h2>
-                                <div className="text-sm text-white/90">
-                                    Total: {userOrders.length} order{userOrders.length !== 1 ? 's' : ''} | 
-                                    Showing: {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Search and Filter Section */}
-                        <div className="p-6 bg-gray-50 border-b border-gray-200">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                {/* Search */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Search Orders</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Order ID, item name, category..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-
-                                {/* Order Status Filter */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Order Status</label>
-                                    <select
-                                        value={selectedStatus}
-                                        onChange={(e) => setSelectedStatus(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    >
-                                        <option value="">All Statuses</option>
-                                        {getOrderStatuses().map((status) => (
-                                            <option key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Date Range Filter */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Date Range</label>
-                                    <select
-                                        value={selectedDateRange}
-                                        onChange={(e) => setSelectedDateRange(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    >
-                                        <option value="">All Time</option>
-                                        <option value="last7days">Last 7 Days</option>
-                                        <option value="last30days">Last 30 Days</option>
-                                        <option value="last3months">Last 3 Months</option>
-                                    </select>
-                                </div>
-
-                                {/* Clear Filters */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700 invisible">Clear</label>
-                                    <button
-                                        onClick={clearFilters}
-                                        className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors duration-200 font-medium"
-                                    >
-                                        Clear Filters
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                    {/* Right Column: Orders & Designs */}
+                    <div className="lg:col-span-2 space-y-10">
                         
-                        {/* Orders Display */}
-                        <div className="p-6">
+                        {/* Order History */}
+                        <div className="bg-white rounded-3xl p-8 shadow-xl shadow-[#050315]/5 border border-[#dedcff]/50">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-4 border-b border-[#dedcff]/50">
+                                <h2 className="text-xl font-black flex items-center gap-3 text-[#050315]">
+                                    <FaHistory className="text-[#433bff]" /> Order History
+                                </h2>
+                                <span className="px-4 py-1.5 bg-[#dedcff] text-[#2f27ce] text-xs font-bold rounded-full">
+                                    {filteredOrders.length} Orders
+                                </span>
+                            </div>
+
+                            {/* Filters */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                                <div className="relative col-span-1 md:col-span-2">
+                                    <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#050315]/30" />
+                                    <input type="text" placeholder="Search orders..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
+                                        className="w-full pl-11 pr-4 py-3 bg-[#fbfbfe] text-[#050315] rounded-xl border-2 border-transparent focus:border-[#dedcff] text-sm font-medium outline-none transition-all placeholder:text-[#050315]/40" />
+                                </div>
+                                <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} 
+                                    className="w-full px-4 py-3 bg-[#fbfbfe] text-[#050315] rounded-xl border-2 border-transparent focus:border-[#dedcff] text-sm font-medium outline-none cursor-pointer">
+                                    <option value="">All Statuses</option>
+                                    {getOrderStatuses().map((status) => (
+                                        <option key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option>
+                                    ))}
+                                </select>
+                                <button onClick={clearFilters} className="w-full px-4 py-3 bg-white border-2 border-[#dedcff] text-[#050315] font-bold rounded-xl hover:bg-[#fbfbfe] transition-all text-sm">
+                                    Clear
+                                </button>
+                            </div>
+
+                            {/* Orders List */}
                             {ordersLoading ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                                    <span className="ml-3 text-gray-600">Loading orders...</span>
-                                </div>
-                            ) : filteredOrders.length === 0 && userOrders.length > 0 ? (
-                                <div className="text-center py-12">
-                                    <div className="mb-4">
-                                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No orders match your search criteria</h3>
-                                        <p className="text-gray-600 mb-6">Try adjusting your search terms or clear the filters</p>
-                                        <button 
-                                            onClick={clearFilters}
-                                            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-colors duration-200"
-                                        >
-                                            Clear Filters
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : userOrders.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <div className="w-24 h-24 mx-auto mb-4 text-gray-300">
-                                        <svg fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z"/>
-                                            <path d="M9 8V17H11V8H9ZM13 8V17H15V8H13Z"/>
-                                        </svg>
-                                    </div>
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">No orders yet</h3>
-                                    <p className="text-gray-600 mb-4">You haven't placed any orders yet. Start shopping to see your order history here!</p>
-                                    <button
-                                        onClick={() => window.location.href = '/furniture'}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                                    >
-                                        Start Shopping
-                                    </button>
+                                <div className="space-y-4">{[1,2].map(i => <div key={i} className="h-32 bg-[#fbfbfe] rounded-2xl animate-pulse"></div>)}</div>
+                            ) : filteredOrders.length === 0 ? (
+                                <div className="text-center py-16 bg-[#fbfbfe] rounded-2xl border-2 border-dashed border-[#dedcff]">
+                                    <p className="text-[#050315]/40 font-bold uppercase text-xs tracking-widest">No orders found</p>
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {filteredOrders.map((order) => (
-                                        <div key={order._id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-6 border border-gray-200">
-                                            {/* Order Header */}
-                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                        <MdOutlineChair />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="text-xl font-bold text-gray-900">Order #{order._id.slice(-8)}</h3>
-                                                        <p className="text-sm text-gray-600">
-                                                            Placed on {new Date(order.orderDate).toLocaleDateString()} at {new Date(order.orderDate).toLocaleTimeString()}
-                                                        </p>
-                                                    </div>
+                                    {filteredOrders.map(order => (
+                                        <div key={order._id} className="p-6 bg-white rounded-2xl border-2 border-[#dedcff]/50 hover:border-[#433bff]/50 transition-all shadow-sm">
+                                            <div className="flex flex-col md:flex-row justify-between gap-4 mb-6 pb-4 border-b border-[#dedcff]/30">
+                                                <div>
+                                                    <p className="text-[10px] font-black text-[#050315]/40 uppercase tracking-widest mb-1">Order ID</p>
+                                                    <h4 className="text-lg font-black text-[#050315]">#{order._id.slice(-8).toUpperCase()}</h4>
                                                 </div>
-                                                <div className="mt-2 sm:mt-0">
-                                                    <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(order.status)}`}>
-                                                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                                                    </span>
+                                                <div className="flex flex-col md:items-end">
+                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`}>{order.status}</span>
+                                                    <p className="text-[10px] text-[#050315]/50 mt-2 font-bold uppercase">{new Date(order.orderDate).toLocaleDateString()}</p>
                                                 </div>
                                             </div>
-                                            
-                                            {/* Order Summary Stats */}
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                    <PiArmchairFill />
-                                                    <div>
-                                                        <p className="font-medium">Items</p>
-                                                        <p>{order.items.reduce((total, item) => total + item.quantity, 0)} pieces</p>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                    <TfiMoney />
-                                                    <div>
-                                                        <p className="font-medium">Total</p>
-                                                        <p className="font-bold text-lg">${order.pricing.total.toFixed(2)}</p>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                    <TbTax />
-                                                    <div>
-                                                        <p className="font-medium">Tax</p>
-                                                        <p>${order.pricing.tax.toFixed(2)}</p>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                    <MdOutlineBedroomParent />
-                                                    <div>
-                                                        <p className="font-medium">Room Size</p>
-                                                        <p>{order.roomSetup.width}×{order.roomSetup.length}×{order.roomSetup.height}m</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Room Setup Info */}
-                                            <div className="mb-4 p-3 bg-amber-50 rounded-md border border-amber-200">
-                                                <h4 className="text-sm font-medium text-amber-800 mb-2">Room Specifications</h4>
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-amber-700">
-                                                    <div><span className="font-medium">Size:</span> {order.roomSetup.width}m × {order.roomSetup.length}m × {order.roomSetup.height}m</div>
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="font-medium">Wall:</span> 
-                                                        <span className="inline-block w-4 h-4 rounded border border-gray-300 ml-1" style={{backgroundColor: order.roomSetup.wallColor}}></span> 
-                                                        <span>{order.roomSetup.wallColor}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="font-medium">Floor:</span> 
-                                                        <span className="inline-block w-4 h-4 rounded border border-gray-300 ml-1" style={{backgroundColor: order.roomSetup.floorColor}}></span>
-                                                        <span>{order.roomSetup.floorColor}</span>
-                                                    </div>
-                                                    <div><span className="font-medium">Items:</span> {order.items.reduce((total, item) => total + item.quantity, 0)} pieces</div>
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Order Items */}
-                                            <div className="mb-4">
-                                                <h4 className="text-sm font-medium text-gray-900 mb-3">Items Ordered</h4>
-                                                <div className="space-y-3">
-                                                    {order.items.map((item, index) => (
-                                                        <div key={index} className="flex justify-between items-center py-3 px-4 bg-gray-50 rounded-lg border">
-                                                            <div className="flex items-center space-x-4">
-                                                                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 text-2xl">
-                                                                    <FaChair />
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                                                                    <p className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded-full inline-block mt-1">{item.category}</p>
-                                                                    <p className="text-xs text-gray-500 mt-1">Quantity: {item.quantity}</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="text-lg font-bold text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
-                                                                <p className="text-xs text-gray-600">{item.quantity} × ${item.price.toFixed(2)}</p>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Order Footer */}
-                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end pt-4 border-t border-gray-200 gap-4">
-                                                <div className="text-sm text-gray-600">
-                                                    {order.notes && (
-                                                        <div className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-400">
-                                                            <p><span className="font-medium text-blue-800">Notes:</span> <span className="text-blue-700">{order.notes}</span></p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="text-right bg-green-50 p-4 rounded-lg border">
-                                                    <p className="text-2xl font-bold text-green-800">${order.pricing.total.toFixed(2)}</p>
-                                                    <p className="text-xs text-green-600">Including ${order.pricing.tax.toFixed(2)} tax</p>
-                                                    <p className="text-xs text-gray-600 mt-1">
-                                                        Status: <span className={`font-medium px-2 py-1 rounded ${getStatusColor(order.status).replace('border', 'bg').replace('text-', 'text-')}`}>
-                                                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                                                        </span>
-                                                    </p>
-                                                </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-[#fbfbfe] rounded-xl border border-[#dedcff]/50">
+                                                <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Items</p><p className="font-black text-sm text-[#050315]">{order.items.length}</p></div>
+                                                <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Total</p><p className="font-black text-lg text-[#2f27ce]">${order.pricing.total.toFixed(2)}</p></div>
+                                                <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Tax</p><p className="font-black text-sm text-[#050315]/60">${order.pricing.tax.toFixed(2)}</p></div>
+                                                <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Room</p><p className="font-black text-xs text-[#050315]">{order.roomSetup.width}x{order.roomSetup.length}m</p></div>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </div>
-                    </div>
 
-                    {/* Saved Designs */}
-                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
-                        <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-                            <div className="bg-indigo-700 px-6 py-4">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-bold text-white">Saved 3D Designs</h2>
-                                    <span className="text-white/90 text-sm">{userDesigns.length} total</span>
+                        {/* Saved Designs */}
+                        <div className="bg-white rounded-3xl p-8 shadow-xl shadow-[#050315]/5 border border-[#dedcff]/50">
+                            <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#dedcff]/50">
+                                <h2 className="text-xl font-black flex items-center gap-3 text-[#050315]">
+                                    <FaDraftingCompass className="text-[#433bff]" /> Saved Designs
+                                </h2>
+                                <span className="px-4 py-1.5 bg-[#dedcff] text-[#2f27ce] text-xs font-bold rounded-full">
+                                    {userDesigns.length} Total
+                                </span>
+                            </div>
+
+                            {designsLoading ? (
+                                <div className="h-40 flex items-center justify-center animate-pulse text-[#433bff]">Loading Designs...</div>
+                            ) : userDesigns.length === 0 ? (
+                                <div className="text-center py-16 bg-[#fbfbfe] rounded-2xl border-2 border-dashed border-[#dedcff]">
+                                    <PiWall size={40} className="mx-auto text-[#050315]/20 mb-3" />
+                                    <p className="text-[#050315]/40 font-bold uppercase text-xs tracking-widest">No designs saved yet</p>
                                 </div>
-                            </div>
-
-                            <div className="p-6">
-                                {designsLoading ? (
-                                    <div className="flex items-center justify-center py-8">
-                                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-                                        <span className="ml-3 text-gray-600">Loading saved designs...</span>
-                                    </div>
-                                ) : userDesigns.length === 0 ? (
-                                    <div className="text-center py-10">
-                                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
-                                            <PiWall className="text-3xl" />
-                                        </div>
-                                        <h3 className="text-lg font-medium text-gray-900">No saved designs yet</h3>
-                                        <p className="text-gray-600 mt-1">Save a design from the 3D viewer to see it here.</p>
-                                        <div className="mt-4">
-                                            <button
-                                                onClick={() => (window.location.href = '/viewer-3d')}
-                                                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-                                            >
-                                                Go to 3D Viewer
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                        {userDesigns.map(design => (
-                                            <div key={design._id} className="border border-gray-200 rounded-lg overflow-hidden bg-white hover:shadow-lg transition-shadow duration-200 flex flex-col">
-                                                {design.thumbnail ? (
-                                                    <img src={design.thumbnail} alt={design.name || 'Design'} className="w-full h-40 object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400 text-3xl">
-                                                        <PiArmchairFill />
-                                                    </div>
-                                                )}
-
-                                                <div className="p-4 flex-1 flex flex-col gap-3">
-                                                    <div>
-                                                        <h3 className="text-base font-semibold text-gray-900 truncate">{design.name || 'My Design'}</h3>
-                                                        <p className="text-xs text-gray-500 mt-1">
-                                                            {design.createdAt ? new Date(design.createdAt).toLocaleString() : ''}
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-3 text-xs text-gray-600 bg-gray-50 p-3 rounded-md">
-                                                        <div className="flex items-center gap-2">
-                                                            <MdOutlineBedroomParent className="text-gray-500" />
-                                                            <div>
-                                                                <p className="font-medium">Room</p>
-                                                                <p>
-                                                                    {design.room?.width ?? '—'}×{design.room?.length ?? '—'}m
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <FaChair className="text-gray-500" />
-                                                            <div>
-                                                                <p className="font-medium">Items</p>
-                                                                <p>{Array.isArray(design.items) ? design.items.length : 0}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => loadDesignInViewer(design)}
-                                                        className="mt-auto w-full px-3 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-                                                    >
-                                                        Open in 3D Viewer
-                                                    </button>
-                                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    {userDesigns.map(design => (
+                                        <div key={design._id} className="group bg-[#fbfbfe] rounded-2xl overflow-hidden border border-[#dedcff] transition-all hover:shadow-lg hover:border-[#433bff]/50">
+                                            <div className="relative h-48 bg-white border-b border-[#dedcff]">
+                                                {design.thumbnail ? <img src={design.thumbnail} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-[#050315]/10"><PiArmchairFill size={60} /></div>}
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                                            <div className="p-5">
+                                                <h3 className="font-black text-lg text-[#050315] truncate mb-1">{design.name || 'Untitled Design'}</h3>
+                                                <p className="text-xs text-[#050315]/50 font-medium mb-4">{new Date(design.createdAt).toLocaleDateString()}</p>
+                                                <button onClick={() => loadDesignInViewer(design)} className="w-full py-3 bg-white border-2 border-[#2f27ce] text-[#2f27ce] font-bold rounded-xl hover:bg-[#2f27ce] hover:text-[#fbfbfe] transition-all active:scale-95">
+                                                    Open 3D Viewer
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
+                        
                     </div>
                 </div>
             </div>
-        </div>
         </div>
     );
 }

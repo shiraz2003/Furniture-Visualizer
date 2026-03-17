@@ -1,132 +1,120 @@
+import { FaFacebookF, FaInstagram, FaYoutube, FaTwitter } from "react-icons/fa";
+import { FaLocationDot, FaPhone, FaEnvelope } from "react-icons/fa6";
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   return (
-    <footer className="w-full bg-primary/10">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-[25px] lg:px-[50px] py-[25px] sm:py-[35px] lg:py-[50px]">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-7 lg:gap-8">
-          {/* Company */}
+    <footer className="w-full bg-[#fbfbfe] pt-20 pb-10 border-t border-[#dedcff]/60 font-sans">
+      <div className="max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-20">
+        
+        {/* Top Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 mb-16">
+          
+          {/* Brand & Description */}
+          <div className="lg:col-span-2">
+            <Link to="/" className="inline-block mb-6">
+                <span className="text-4xl font-black tracking-tight text-[#050315]">
+                    Design<span className="text-[#FBBF24]">Lab.</span>
+                </span>
+            </Link>
+            <p className="text-sm font-medium text-[#050315]/60 leading-relaxed max-w-sm mb-8">
+              Transforming houses into dream homes with our premium curated furniture collection and innovative 3D room visualization technology.
+            </p>
+            {/* Social Icons */}
+            <div className="flex items-center gap-4">
+              <a href="#" aria-label="Facebook" className="w-10 h-10 rounded-xl bg-[#dedcff]/50 flex items-center justify-center text-[#050315] hover:bg-[#050315] hover:text-white transition-all duration-300 hover:-translate-y-1 shadow-sm">
+                <FaFacebookF size={16} />
+              </a>
+              <a href="#" aria-label="Instagram" className="w-10 h-10 rounded-xl bg-[#dedcff]/50 flex items-center justify-center text-[#050315] hover:bg-[#050315] hover:text-white transition-all duration-300 hover:-translate-y-1 shadow-sm">
+                <FaInstagram size={18} />
+              </a>
+              <a href="#" aria-label="Twitter" className="w-10 h-10 rounded-xl bg-[#dedcff]/50 flex items-center justify-center text-[#050315] hover:bg-[#050315] hover:text-white transition-all duration-300 hover:-translate-y-1 shadow-sm">
+                <FaTwitter size={16} />
+              </a>
+              <a href="#" aria-label="YouTube" className="w-10 h-10 rounded-xl bg-[#dedcff]/50 flex items-center justify-center text-[#050315] hover:bg-[#050315] hover:text-white transition-all duration-300 hover:-translate-y-1 shadow-sm">
+                <FaYoutube size={18} />
+              </a>
+            </div>
+          </div>
+
+          {/* Company Links */}
           <div>
-            <h4 className="font-kufam font-medium text-[18px] sm:text-[20px] lg:text-[24px] leading-tight text-primary mb-[8px] sm:mb-[10px] lg:mb-[12px]">
-              Company
-            </h4>
-            <ul className="space-y-[6px] sm:space-y-[7px] lg:space-y-[8px]">
-              <li>
-                <a
-                  href="#"
-                  className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70 hover:text-secondary hover:underline transition-colors"
-                >
-                  About Us
-                </a>
+            <h4 className="font-black text-lg text-[#050315] mb-6 uppercase tracking-wider">Company</h4>
+            <ul className="space-y-2">
+              {[
+                { name: 'About Us', path: '/about' },
+                { name: 'Our Story', path: '/story' },
+                { name: 'Careers', path: '/careers' },
+                { name: 'Press', path: '/press' }
+              ].map((item) => (
+                <li key={item.name}>
+                  <Link to={item.path} className="text-sm font-medium text-[#050315]/60 hover:text-[#050315] transition-colors relative inline-block group">
+                    {item.name}
+                    <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-[#050315] transition-all duration-300 group-hover:w-full"></span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Support Links */}
+          <div>
+            <h4 className="font-black text-lg text-[#050315] mb-6 uppercase tracking-wider">Support</h4>
+            <ul className="space-y-2">
+              {[
+                { name: 'Help Center', path: '/help' },
+                { name: 'Shipping & Returns', path: '/shipping' },
+                { name: 'Track Order', path: '/track-order' },
+                { name: 'FAQs', path: '/faqs' }
+              ].map((item) => (
+                <li key={item.name}>
+                  <Link to={item.path} className="text-sm font-medium text-[#050315]/60 hover:text-[#050315] transition-colors relative inline-block group">
+                    {item.name}
+                    <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-[#050315] transition-all duration-300 group-hover:w-full"></span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact Details */}
+          <div>
+            <h4 className="font-black text-lg text-[#050315] mb-6 uppercase tracking-wider">Contact</h4>
+            <ul className="space-y-3">
+              <li className="text-sm font-medium text-[#050315]/60 flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-[#dedcff]/40 flex items-center justify-center shrink-0 text-[#050315]">
+                    <FaLocationDot size={14} />
+                </div>
+                <span className="pt-1">No. 128/5, Nugegoda<br/> Sri Lanka</span>
               </li>
-              <li>
-                <a
-                  href="#"
-                  className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70 hover:text-secondary hover:underline transition-colors"
-                >
-                  Blog
-                </a>
+              <li className="text-sm font-medium text-[#050315]/60 flex items-center gap-4">
+                <div className="w-8 h-8 rounded-full bg-[#dedcff]/40 flex items-center justify-center shrink-0 text-[#050315]">
+                    <FaPhone size={14} />
+                </div>
+                <a href="tel:+8801234567897" className="hover:text-[#050315] transition-colors pt-1">+94 773401556</a>
               </li>
-              <li>
-                <a
-                  href="#"
-                  className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70 hover:text-secondary hover:underline transition-colors"
-                >
-                  Career
-                </a>
+              <li className="text-sm font-medium text-[#050315]/60 flex items-center gap-4">
+                <div className="w-8 h-8 rounded-full bg-[#dedcff]/40 flex items-center justify-center shrink-0 text-[#050315]">
+                    <FaEnvelope size={14} />
+                </div>
+                <a href="mailto:info@designlab.com" className="hover:text-[#050315] transition-colors pt-1">info@designlab.com</a>
               </li>
             </ul>
           </div>
 
-          {/* Contact */}
-          <div>
-            <h4 className="font-kufam font-medium text-[18px] sm:text-[20px] lg:text-[24px] leading-tight text-primary mb-[8px] sm:mb-[10px] lg:mb-[12px]">
-              Contact
-            </h4>
-            <ul className="space-y-[6px] sm:space-y-[7px] lg:space-y-[8px]">
-              <li className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70">
-                Address: Mohammadpur, Dhaka
-              </li>
-              <li className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70">
-                Phone: ++88012345678976
-              </li>
-              <li className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70">
-                Email: info@shop.com
-              </li>
-            </ul>
-          </div>
-
-          {/* Important Links */}
-          <div>
-            <h4 className="font-kufam font-medium text-[18px] sm:text-[20px] lg:text-[24px] leading-tight text-primary mb-[8px] sm:mb-[10px] lg:mb-[12px]">
-              Important Links
-            </h4>
-            <ul className="space-y-[6px] sm:space-y-[7px] lg:space-y-[8px]">
-              <li>
-                <a
-                  href="#"
-                  className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70 hover:text-secondary hover:underline transition-colors"
-                >
-                  Shop
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70 hover:text-secondary hover:underline transition-colors"
-                >
-                  Privacy Policy
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70 hover:text-secondary hover:underline transition-colors"
-                >
-                  Terms & Condition
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Follow Us */}
-          <div>
-            <h4 className="font-kufam font-medium text-[18px] sm:text-[20px] lg:text-[24px] leading-tight text-primary mb-[8px] sm:mb-[10px] lg:mb-[12px]">
-              Follow Us
-            </h4>
-            <ul className="space-y-[6px] sm:space-y-[7px] lg:space-y-[8px]">
-              <li>
-                <a
-                  href="#"
-                  className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70 hover:text-secondary hover:underline transition-colors"
-                >
-                  Facebook
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70 hover:text-secondary hover:underline transition-colors"
-                >
-                  Instagram
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="font-kufam font-normal text-[16px] sm:text-[18px] lg:text-[20px] leading-tight text-primary/70 hover:text-secondary hover:underline transition-colors"
-                >
-                  Youtube
-                </a>
-              </li>
-            </ul>
-          </div>
         </div>
 
-        {/* Copyright Section */}
-        <div className="mt-[20px] sm:mt-[25px] lg:mt-[30px] pt-[15px] sm:pt-[20px] lg:pt-[25px] border-t border-primary/20">
-          <p className="text-center font-kufam font-normal text-[14px] sm:text-[15px] lg:text-[16px] text-primary/60">
-            © 2024 Furniture Visualizer. All rights reserved.
+        {/* Bottom Section (Copyright & Legal) */}
+        <div className="pt-8 border-t border-[#dedcff] flex flex-col md:flex-row items-center justify-between gap-6">
+          <p className="text-sm font-medium text-[#050315]/50 text-center md:text-left">
+            © {new Date().getFullYear()} DesignLab. Visualizer. All rights reserved.
           </p>
+          <div className="flex items-center gap-6">
+            <Link to="/privacy" className="text-xs font-bold text-[#050315]/50 hover:text-[#050315] uppercase tracking-wider transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="text-xs font-bold text-[#050315]/50 hover:text-[#050315] uppercase tracking-wider transition-colors">Terms of Service</Link>
+          </div>
         </div>
+
       </div>
     </footer>
   );

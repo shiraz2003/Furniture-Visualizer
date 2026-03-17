@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { IoArrowForward, IoEyeOutline } from "react-icons/io5";
 
 const FALLBACK_IMAGE =
-  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%25' height='100%25' fill='%23f1f5f9'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='20'>No Image</text></svg>";
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%25' height='100%25' fill='%23dedcff'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23050315' fill-opacity='0.4' font-family='Arial' font-weight='bold' font-size='16'>No Image</text></svg>";
 
 const getFinalImage = (imageData) => {
   if (!imageData) return null;
@@ -50,8 +50,8 @@ export default function FurnitureCard(props) {
 
   if (!furniture || Object.keys(furniture).length === 0) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex min-h-[320px] items-center justify-center text-center text-slate-400">
+      <div className="rounded-2xl border border-[#dedcff] bg-white p-6 shadow-sm">
+        <div className="flex min-h-[250px] items-center justify-center text-center font-bold text-[#050315]/40 text-sm">
           No furniture data available
         </div>
       </div>
@@ -59,11 +59,13 @@ export default function FurnitureCard(props) {
   }
 
   return (
-    <div className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-      <div className="relative h-[260px] overflow-hidden bg-slate-100 sm:h-[280px]">
+    <div className="group overflow-hidden rounded-2xl border border-[#dedcff] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(47,39,206,0.12)] hover:border-[#FBBF24]/30 flex flex-col h-full">
+      
+      {/* Image Section - Reduced Height */}
+      <div className="relative h-[200px] overflow-hidden bg-[#fbfbfe] sm:h-[220px]">
         {imageLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100">
-            <div className="h-9 w-9 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600"></div>
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#fbfbfe]">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#dedcff] border-t-[#FBBF24]"></div>
           </div>
         )}
 
@@ -84,51 +86,57 @@ export default function FurnitureCard(props) {
           }}
         />
 
-        <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#0F766E] shadow-sm backdrop-blur-md">
+        {/* Category Badge */}
+        <div className="absolute left-3 top-3 rounded-md bg-white/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-[#FBBF24] shadow-sm backdrop-blur-md border border-[#dedcff]/50">
           {furniture?.category || "Furniture"}
         </div>
       </div>
 
-      <div className="p-5 sm:p-6">
-        <div className="mb-3">
-          <h3 className="line-clamp-2 text-xl font-bold text-slate-900">
+      {/* Content Section - Tighter Spacing */}
+      <div className="p-4 sm:p-5 flex flex-col flex-1">
+        
+        {/* Title */}
+        <div className="mb-2">
+          <h3 className="line-clamp-2 text-lg font-black leading-tight text-[#050315] group-hover:text-[#FBBF24] transition-colors">
             {furniture?.name || "Unnamed Furniture"}
           </h3>
         </div>
 
-        <div className="mb-5 space-y-2 text-sm text-slate-500">
+        {/* Details */}
+        <div className="mb-4 space-y-1 text-xs text-[#050315]/60 flex-1">
           <p>
-            <span className="font-semibold text-slate-700">Category:</span>{" "}
+            <span className="font-bold text-[#050315]/80">Category:</span>{" "}
             {furniture?.category || "Unknown"}
           </p>
-
           {furniture?.dimensions && (
-            <p>
-              <span className="font-semibold text-slate-700">Dimensions:</span>{" "}
+            <p className="truncate">
+              <span className="font-bold text-[#050315]/80">Dimensions:</span>{" "}
               {furniture.dimensions}
             </p>
           )}
         </div>
 
-        <div className="mb-5 flex items-end justify-between">
-          <div>
-            <p className="mb-1 text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
-              Price
-            </p>
-            <p className="text-2xl font-bold text-[#0F766E]">
-              Rs.{furniture?.price ? Number(furniture.price).toFixed(2) : "0.00"}
-            </p>
-          </div>
+        {/* Price & Action Area */}
+        <div className="mt-auto">
+            <div className="mb-4">
+              <p className="mb-0.5 text-[9px] font-black uppercase tracking-widest text-[#050315]/40">
+                Price
+              </p>
+              <p className="text-xl font-black text-[#FBBF24]">
+                ${furniture?.price ? Number(furniture.price).toFixed(2) : "0.00"}
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate(`/furniture/${furniture._id}`)}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#fbfbfe] border border-[#dedcff] px-4 py-2.5 text-xs font-bold text-[#050315] transition-all duration-300 hover:bg-[#FBBF24] hover:border-[#FBBF24] hover:text-white active:scale-95 group/btn"
+            >
+              <IoEyeOutline size={16} className="text-[#050315]/50 group-hover/btn:text-white transition-colors" />
+              View Details
+              <IoArrowForward size={14} className="opacity-0 -ml-4 group-hover/btn:opacity-100 group-hover/btn:ml-0 transition-all duration-300" />
+            </button>
         </div>
 
-        <button
-          onClick={() => navigate(`/furniture/${furniture._id}`)}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0F766E]"
-        >
-          <IoEyeOutline size={18} />
-          View Details
-          <IoArrowForward size={18} />
-        </button>
       </div>
     </div>
   );
