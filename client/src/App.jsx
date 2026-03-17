@@ -24,11 +24,11 @@ import CartPage from './pages/cart.jsx';
 import Furniture from './pages/furniture.jsx';
 import FurnitureOverviewPage from './pages/furnitureoverviewpage.jsx';
 import SavedDesigns from './pages/SavedDesigns.jsx'; // <-- Add this import
-import Reviews from './pages/ReviewPage.jsx';
+import Reviews from './pages/ReviewPage.jsx'; // <-- Add this import
 
 function App() {
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "your-google-client-id"}>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID }>
       <DesignProvider>
         <Routes>
           {/* Admin Section - Protected */}

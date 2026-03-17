@@ -1,5 +1,5 @@
 import express from 'express';
-import { createUser, loginUser, sendResetPasswordOTP, verifyOTP, resetPassword, getUserProfile, updateUserProfile } from '../controllers/authController.js';
+import { createUser, loginUser, sendResetPasswordOTP, verifyOTP, resetPassword, getUserProfile, updateUserProfile , googleLoginUser} from '../controllers/authController.js';
 import jwt from 'jsonwebtoken';
 
 
@@ -25,7 +25,7 @@ function authenticateToken(req, res, next) {
 
 userRouter.post('/register', createUser);
 userRouter.post('/login', loginUser);
-
+userRouter.post("/google-login", googleLoginUser);
 
 userRouter.post("/send-reset-password-otp", sendResetPasswordOTP);
 userRouter.post("/verify-otp", verifyOTP);

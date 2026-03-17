@@ -42,8 +42,9 @@ export default function LoginPage() {
     async function handleGoogleLogin(credentialResponse) {
         try {
             console.log(credentialResponse);
-            const response = await axios.post(import.meta.env.VITE_BACKEND_URL+"/api/users/google-login", { 
-                credential: credentialResponse.credential 
+            const response = await axios.post(import.meta.env.VITE_BACKEND_URL+"/api/auth/google-login", { 
+          credential: credentialResponse.credential,
+          accessToken: credentialResponse.access_token
             });
             localStorage.setItem("token", response.data.token);
             toast.success("Google login successful!");
@@ -55,7 +56,7 @@ export default function LoginPage() {
             }
         } catch (error) {
             console.error("Google login error!", error);
-            toast.error("Google login failed!");
+          toast.error(error.response?.data?.error || "Google login failed!");
         }
     }
   return (

@@ -57,22 +57,23 @@ export default function RegisterPage() {
         try {
             console.log(credentialResponse);
             const response = await axios.post(
-                import.meta.env.VITE_BACKEND_URL + "/api/users/google-login",
+                import.meta.env.VITE_BACKEND_URL + "/api/auth/google-login",
                 {
-                    credential: credentialResponse.credential
+                    credential: credentialResponse.credential,
+                    accessToken: credentialResponse.access_token
                 }
             );
             localStorage.setItem("token", response.data.token);
             toast.success("Registration successful!");
 
-            if (response.data.role === 'admin') {
+            if (response.data.user?.role === 'admin') {
                 navigate("/admin/");
             } else {
                 navigate("/");
             }
         } catch (error) {
             console.error("Google registration error!", error);
-            toast.error("Google registration failed!");
+            toast.error(error.response?.data?.error || "Google registration failed!");
         }
     }
 
