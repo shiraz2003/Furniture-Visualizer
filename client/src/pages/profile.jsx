@@ -26,6 +26,8 @@ export default function Profile() {
     const [userOrders, setUserOrders] = useState([]);
     const [filteredOrders, setFilteredOrders] = useState([]);
     const [ordersLoading, setOrdersLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 2;
     
     // Search and filter states
     const [searchTerm, setSearchTerm] = useState('');
@@ -35,6 +37,8 @@ export default function Profile() {
     // Saved designs state
     const [userDesigns, setUserDesigns] = useState([]);
     const [designsLoading, setDesignsLoading] = useState(false);
+    const [designsCurrentPage, setDesignsCurrentPage] = useState(1);
+    const DESIGNS_PER_PAGE = 2;
 
     const { setRoom, setItems, setDesignName } = useDesign();
 
@@ -87,6 +91,7 @@ export default function Profile() {
         }
 
         setFilteredOrders(filtered);
+        setCurrentPage(1); // Reset to page 1 when filters change
     }, [userOrders, searchTerm, selectedStatus, selectedDateRange]);
 
     const fetchUserProfile = async () => {
@@ -162,6 +167,7 @@ export default function Profile() {
         setSearchTerm('');
         setSelectedStatus('');
         setSelectedDateRange('');
+        setCurrentPage(1);
     };
 
     // Updated status colors to match your theme
@@ -175,6 +181,24 @@ export default function Profile() {
             cancelled: 'bg-rose-100 text-rose-800 border-rose-200' // kept red for cancellation alert
         };
         return colors[status] || 'bg-[#fbfbfe] text-[#050315] border-[#dedcff]';
+    };
+
+    // Pagination helper
+    const getPaginationData = () => {
+        const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+        return { totalPages, paginatedOrders, startIndex, endIndex };
+    };
+
+    // Pagination helper for designs
+    const getDesignsPaginationData = () => {
+        const totalPages = Math.ceil(userDesigns.length / DESIGNS_PER_PAGE);
+        const startIndex = (designsCurrentPage - 1) * DESIGNS_PER_PAGE;
+        const endIndex = startIndex + DESIGNS_PER_PAGE;
+        const paginatedDesigns = userDesigns.slice(startIndex, endIndex);
+        return { totalPages, paginatedDesigns };
     };
 
     const handleInputChange = (e) => {
@@ -364,28 +388,67 @@ export default function Profile() {
                                     <p className="text-[#050315]/40 font-bold uppercase text-xs tracking-widest">No orders found</p>
                                 </div>
                             ) : (
-                                <div className="space-y-6">
-                                    {filteredOrders.map(order => (
-                                        <div key={order._id} className="p-2 bg-white rounded-xl border-2 border-[#dedcff]/50 hover:border-[#433bff]/50 transition-all shadow-sm">
-                                            <div className="flex flex-col md:flex-row justify-between gap-4 mb-6 pb-4 border-b border-[#dedcff]/30">
-                                                <div>
-                                                    <p className="text-[10px] font-black text-[#050315]/40 uppercase tracking-widest mb-1">Order ID</p>
-                                                    <h4 className="text-lg font-black text-[#050315]">#{order._id.slice(-8).toUpperCase()}</h4>
+                                <>
+                                    <div className="space-y-6 mb-8">
+                                        {getPaginationData().paginatedOrders.map(order => (
+                                            <div key={order._id} className="p-2 bg-white rounded-xl border-2 border-[#dedcff]/50 hover:border-[#433bff]/50 transition-all shadow-sm">
+                                                <div className="flex flex-col md:flex-row justify-between gap-4 mb-6 pb-4 border-b border-[#dedcff]/30">
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-[#050315]/40 uppercase tracking-widest mb-1">Order ID</p>
+                                                        <h4 className="text-lg font-black text-[#050315]">#{order._id.slice(-8).toUpperCase()}</h4>
+                                                    </div>
+                                                    <div className="flex flex-col md:items-end">
+                                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`}>{order.status}</span>
+                                                        <p className="text-[10px] text-[#050315]/50 mt-2 font-bold uppercase">{new Date(order.orderDate).toLocaleDateString()}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-col md:items-end">
-                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(order.status)}`}>{order.status}</span>
-                                                    <p className="text-[10px] text-[#050315]/50 mt-2 font-bold uppercase">{new Date(order.orderDate).toLocaleDateString()}</p>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-[#fbfbfe] rounded-xl border border-[#dedcff]/50">
+                                                    <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Items</p><p className="font-black text-sm text-[#050315]">{order.items.length}</p></div>
+                                                    <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Total</p><p className="font-black text-lg text-[#2f27ce]">Rs.{order.pricing.total.toFixed(2)}</p></div>
+                                                    <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Tax</p><p className="font-black text-sm text-[#050315]/60">Rs.{order.pricing.tax.toFixed(2)}</p></div>
+                                                    <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Room</p><p className="font-black text-xs text-[#050315]">{order.roomSetup.width}x{order.roomSetup.length}m</p></div>
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-[#fbfbfe] rounded-xl border border-[#dedcff]/50">
-                                                <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Items</p><p className="font-black text-sm text-[#050315]">{order.items.length}</p></div>
-                                                <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Total</p><p className="font-black text-lg text-[#2f27ce]">Rs.{order.pricing.total.toFixed(2)}</p></div>
-                                                <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Tax</p><p className="font-black text-sm text-[#050315]/60">Rs.{order.pricing.tax.toFixed(2)}</p></div>
-                                                <div><p className="text-[9px] font-black text-[#050315]/40 uppercase mb-1">Room</p><p className="font-black text-xs text-[#050315]">{order.roomSetup.width}x{order.roomSetup.length}m</p></div>
+                                        ))}
+                                    </div>
+
+                                    {/* Pagination Controls */}
+                                    {getPaginationData().totalPages > 1 && (
+                                        <div className="flex items-center justify-center gap-2 mt-8 pt-6 border-t border-[#dedcff]/50">
+                                            <button
+                                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                disabled={currentPage === 1}
+                                                className="px-4 py-2 bg-white border-2 border-[#dedcff] text-[#050315] font-bold rounded-lg hover:bg-[#fbfbfe] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                                            >
+                                                ← Previous
+                                            </button>
+
+                                            <div className="flex gap-2">
+                                                {Array.from({ length: getPaginationData().totalPages }, (_, i) => i + 1).map(page => (
+                                                    <button
+                                                        key={page}
+                                                        onClick={() => setCurrentPage(page)}
+                                                        className={`px-3.5 py-2 rounded-lg font-bold text-sm transition-all ${
+                                                            currentPage === page
+                                                                ? 'bg-[#2f27ce] text-[#fbfbfe] shadow-lg shadow-[#2f27ce]/30'
+                                                                : 'bg-white border-2 border-[#dedcff] text-[#050315] hover:bg-[#fbfbfe]'
+                                                        }`}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                ))}
                                             </div>
+
+                                            <button
+                                                onClick={() => setCurrentPage(prev => Math.min(getPaginationData().totalPages, prev + 1))}
+                                                disabled={currentPage === getPaginationData().totalPages}
+                                                className="px-4 py-2 bg-white border-2 border-[#dedcff] text-[#050315] font-bold rounded-lg hover:bg-[#fbfbfe] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                                            >
+                                                Next →
+                                            </button>
                                         </div>
-                                    ))}
-                                </div>
+                                    )}
+                                </>
                             )}
                         </div>
 
@@ -408,22 +471,61 @@ export default function Profile() {
                                     <p className="text-[#050315]/40 font-bold uppercase text-xs tracking-widest">No designs saved yet</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    {userDesigns.map(design => (
-                                        <div key={design._id} className="group bg-[#fbfbfe] rounded-2xl overflow-hidden border border-[#dedcff] transition-all hover:shadow-lg hover:border-[#433bff]/50">
-                                            <div className="relative h-48 bg-white border-b border-[#dedcff]">
-                                                {design.thumbnail ? <img src={design.thumbnail} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-[#050315]/10"><PiArmchairFill size={60} /></div>}
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                                        {getDesignsPaginationData().paginatedDesigns.map(design => (
+                                            <div key={design._id} className="group bg-[#fbfbfe] rounded-2xl overflow-hidden border border-[#dedcff] transition-all hover:shadow-lg hover:border-[#433bff]/50">
+                                                <div className="relative h-48 bg-white border-b border-[#dedcff]">
+                                                    {design.thumbnail ? <img src={design.thumbnail} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-[#050315]/10"><PiArmchairFill size={60} /></div>}
+                                                </div>
+                                                <div className="p-5">
+                                                    <h3 className="font-black text-lg text-[#050315] truncate mb-1">{design.name || 'Untitled Design'}</h3>
+                                                    <p className="text-xs text-[#050315]/50 font-medium mb-4">{new Date(design.createdAt).toLocaleDateString()}</p>
+                                                    <button onClick={() => loadDesignInViewer(design)} className="w-full py-3 bg-white border-2 border-[#2f27ce] text-[#2f27ce] font-bold rounded-xl hover:bg-[#2f27ce] hover:text-[#fbfbfe] transition-all active:scale-95">
+                                                        Open 3D Viewer
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="p-5">
-                                                <h3 className="font-black text-lg text-[#050315] truncate mb-1">{design.name || 'Untitled Design'}</h3>
-                                                <p className="text-xs text-[#050315]/50 font-medium mb-4">{new Date(design.createdAt).toLocaleDateString()}</p>
-                                                <button onClick={() => loadDesignInViewer(design)} className="w-full py-3 bg-white border-2 border-[#2f27ce] text-[#2f27ce] font-bold rounded-xl hover:bg-[#2f27ce] hover:text-[#fbfbfe] transition-all active:scale-95">
-                                                    Open 3D Viewer
-                                                </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Designs Pagination Controls */}
+                                    {getDesignsPaginationData().totalPages > 1 && (
+                                        <div className="flex items-center justify-center gap-2 pt-6 border-t border-[#dedcff]/50">
+                                            <button
+                                                onClick={() => setDesignsCurrentPage(prev => Math.max(1, prev - 1))}
+                                                disabled={designsCurrentPage === 1}
+                                                className="px-4 py-2 bg-white border-2 border-[#dedcff] text-[#050315] font-bold rounded-lg hover:bg-[#fbfbfe] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                                            >
+                                                ← Previous
+                                            </button>
+
+                                            <div className="flex gap-2">
+                                                {Array.from({ length: getDesignsPaginationData().totalPages }, (_, i) => i + 1).map(page => (
+                                                    <button
+                                                        key={page}
+                                                        onClick={() => setDesignsCurrentPage(page)}
+                                                        className={`px-3.5 py-2 rounded-lg font-bold text-sm transition-all ${
+                                                            designsCurrentPage === page
+                                                                ? 'bg-[#2f27ce] text-[#fbfbfe] shadow-lg shadow-[#2f27ce]/30'
+                                                                : 'bg-white border-2 border-[#dedcff] text-[#050315] hover:bg-[#fbfbfe]'
+                                                        }`}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                ))}
                                             </div>
+
+                                            <button
+                                                onClick={() => setDesignsCurrentPage(prev => Math.min(getDesignsPaginationData().totalPages, prev + 1))}
+                                                disabled={designsCurrentPage === getDesignsPaginationData().totalPages}
+                                                className="px-4 py-2 bg-white border-2 border-[#dedcff] text-[#050315] font-bold rounded-lg hover:bg-[#fbfbfe] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                                            >
+                                                Next →
+                                            </button>
                                         </div>
-                                    ))}
-                                </div>
+                                    )}
+                                </>
                             )}
                         </div>
                         

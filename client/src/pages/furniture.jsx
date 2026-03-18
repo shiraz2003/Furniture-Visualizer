@@ -390,10 +390,10 @@ export default function Furniture() {
                   <div className="space-y-2">
                     <label className="block text-[10px] font-black uppercase tracking-widest text-[#050315]/50 ml-1">Maximum Price</label>
                     <div className="relative flex items-center">
-                      <span className="absolute left-4 text-[#050315]/30 font-black">$</span>
+                      <span className="absolute left-4 text-[#050315]/30 font-black">Rs. </span>
                       <input
                         type="number"
-                        placeholder="0.00"
+                        placeholder=" 0.00"
                         value={maxPrice}
                         onChange={(e) => setMaxPrice(e.target.value)}
                         className="w-full pl-9 pr-4 py-3.5 bg-[#fbfbfe] border-2 border-transparent focus:border-[#2f27ce] rounded-xl text-sm font-bold text-[#050315] placeholder:text-[#050315]/30 outline-none focus:ring-4 focus:ring-[#dedcff]/50 transition-all"

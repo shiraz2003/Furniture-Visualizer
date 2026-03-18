@@ -90,7 +90,7 @@ export const createOrder = async (req, res) => {
             items,
             pricing,
             notes: notes || '',
-            status: 'pending',
+            status: 'completed',
             orderDate: new Date()
         });
 

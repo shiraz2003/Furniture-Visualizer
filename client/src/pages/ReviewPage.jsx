@@ -20,6 +20,8 @@ function ReviewPage() {
   const [latestReviews, setLatestReviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [reviewsCurrentPage, setReviewsCurrentPage] = useState(1);
+  const REVIEWS_PER_PAGE = 3;
 
   const userRole = localStorage.getItem('userRole');
 
@@ -60,6 +62,7 @@ function ReviewPage() {
   useEffect(() => {
     if (selectedFurniture) {
       fetchReviewsForFurniture(selectedFurniture);
+      setReviewsCurrentPage(1); // Reset to page 1 when furniture changes
     }
   }, [selectedFurniture]);
 
@@ -121,6 +124,15 @@ function ReviewPage() {
   const getSelectedFurnitureName = () => {
     const furniture = furnitureList.find((f) => f._id === selectedFurniture);
     return furniture ? furniture.name : 'Select Furniture';
+  };
+
+  // Pagination helper for reviews
+  const getReviewsPaginationData = () => {
+    const totalPages = Math.ceil(reviews.length / REVIEWS_PER_PAGE);
+    const startIndex = (reviewsCurrentPage - 1) * REVIEWS_PER_PAGE;
+    const endIndex = startIndex + REVIEWS_PER_PAGE;
+    const paginatedReviews = reviews.slice(startIndex, endIndex);
+    return { totalPages, paginatedReviews };
   };
 
   return (
@@ -250,26 +262,65 @@ function ReviewPage() {
                     <p className="text-[#050315]/40 font-bold uppercase text-xs tracking-widest">No reviews yet. Be the first!</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {reviews.map((review) => (
-                      <div key={review._id} className="bg-[#fbfbfe] border border-[#dedcff] rounded-2xl p-5 hover:border-[#433bff]/30 transition-all">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <p className="font-black text-sm text-[#050315]">{review.userName}</p>
-                            <div className="flex gap-1 mt-1.5">
-                              {[...Array(5)].map((_, i) => (
-                                <FaStar key={i} size={14} color={i < review.rating ? '#FFB800' : '#e5e7eb'} />
-                              ))}
+                  <>
+                    <div className="space-y-4 mb-8">
+                      {getReviewsPaginationData().paginatedReviews.map((review) => (
+                        <div key={review._id} className="bg-[#fbfbfe] border border-[#dedcff] rounded-2xl p-5 hover:border-[#433bff]/30 transition-all">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <p className="font-black text-sm text-[#050315]">{review.userName}</p>
+                              <div className="flex gap-1 mt-1.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <FaStar key={i} size={14} color={i < review.rating ? '#FFB800' : '#e5e7eb'} />
+                                ))}
+                              </div>
                             </div>
+                            <span className="text-[10px] font-bold text-[#050315]/40 uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-[#dedcff]/50">
+                              {new Date(review.createdAt).toLocaleDateString()}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-bold text-[#050315]/40 uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-[#dedcff]/50">
-                            {new Date(review.createdAt).toLocaleDateString()}
-                          </span>
+                          <p className="text-sm text-[#050315]/80 font-medium leading-relaxed">{review.comment}</p>
                         </div>
-                        <p className="text-sm text-[#050315]/80 font-medium leading-relaxed">{review.comment}</p>
+                      ))}
+                    </div>
+
+                    {/* Reviews Pagination Controls */}
+                    {getReviewsPaginationData().totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 pt-6 border-t border-[#dedcff]/50">
+                        <button
+                          onClick={() => setReviewsCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={reviewsCurrentPage === 1}
+                          className="px-4 py-2 bg-white border-2 border-[#dedcff] text-[#050315] font-bold rounded-lg hover:bg-[#fbfbfe] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                        >
+                          ← Previous
+                        </button>
+
+                        <div className="flex gap-2">
+                          {Array.from({ length: getReviewsPaginationData().totalPages }, (_, i) => i + 1).map(page => (
+                            <button
+                              key={page}
+                              onClick={() => setReviewsCurrentPage(page)}
+                              className={`px-3.5 py-2 rounded-lg font-bold text-sm transition-all ${
+                                reviewsCurrentPage === page
+                                  ? 'bg-[#2f27ce] text-white shadow-lg shadow-[#2f27ce]/30'
+                                  : 'bg-white border-2 border-[#dedcff] text-[#050315] hover:bg-[#fbfbfe]'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          ))}
+                        </div>
+
+                        <button
+                          onClick={() => setReviewsCurrentPage(prev => Math.min(getReviewsPaginationData().totalPages, prev + 1))}
+                          disabled={reviewsCurrentPage === getReviewsPaginationData().totalPages}
+                          className="px-4 py-2 bg-white border-2 border-[#dedcff] text-[#050315] font-bold rounded-lg hover:bg-[#fbfbfe] disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                        >
+                          Next →
+                        </button>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
