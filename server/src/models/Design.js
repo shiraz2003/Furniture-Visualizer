@@ -22,7 +22,23 @@ const designSchema = new mongoose.Schema({
   },
   items: [
     {
+      id: String,
       modelId: String,
+      sourceFurnitureId: String,
+      customModel: {
+        id: String,
+        name: String,
+        category: String,
+        modelPath: String,
+        defaultRotationY: Number,
+        price: Number,
+        image: String,
+        size: {
+          w: Number,
+          d: Number,
+          h: Number
+        }
+      },
       x: Number,
       z: Number,
       rotation: Number,

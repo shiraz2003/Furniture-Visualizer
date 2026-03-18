@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { HiMail, HiArrowLeft, HiKey, HiLockClosed } from "react-icons/hi";
-import loginBg from '/furniture1.jpg';
 
 export default function ForgotPassword() {
     const navigate = useNavigate();
@@ -13,6 +12,9 @@ export default function ForgotPassword() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState(1); // 1: email, 2: otp & password, 3: success
+
+    const inputClassName =
+        "w-full p-3.5 sm:p-4 rounded-xl border border-white/10 bg-white/5 text-white outline-none focus:border-[#FBBF24] focus:ring-1 focus:ring-[#FBBF24] transition-all font-medium placeholder:text-white/30 backdrop-blur-md";
 
     async function handleSendOTP() {
         if (!email) {
@@ -91,144 +93,156 @@ export default function ForgotPassword() {
     }
 
     return (
-        <div className="w-full h-screen bg-cover bg-center flex justify-center items-center py-8" style={{ backgroundImage: `url(${loginBg})` }}>
-            <div className="w-[500px] max-h-[90vh] backdrop-blur-sm shadow-2xl rounded-lg flex flex-col items-center gap-6 text-white py-6 px-4 overflow-y-auto">
-                {/* Back to Login Link */}
-                <Link 
-                    to="/login" 
-                    className="flex items-center gap-2 text-amber-300 hover:text-amber-200 transition-colors self-start"
-                >
-                    <HiArrowLeft className="text-xl" />
-                    <span className="text-sm">Back to Login</span>
-                </Link>
+        <div
+            className="w-full min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center relative px-4"
+            style={{ backgroundImage: "url('/login.jpeg')" }}
+        >
+            <div className="absolute inset-0 bg-black/60 pointer-events-none"></div>
 
-                {/* Header */}
-                <div className="text-center">
-                    <div className="mx-auto w-16 h-16 bg-amber-500 rounded-full flex items-center justify-center mb-4">
-                        {step === 1 ? <HiMail className="text-3xl text-white" /> : 
-                         step === 2 ? <HiKey className="text-3xl text-white" /> :
-                         <HiLockClosed className="text-3xl text-white" />}
-                    </div>
-                    <h1 className="text-2xl font-bold text-amber-300 mb-2">
-                        {step === 1 ? "Forgot Password?" : 
-                         step === 2 ? "Verify OTP" : 
-                         "Password Reset!"}
-                    </h1>
-                    <p className="text-sm text-white/80">
-                        {step === 1 ? "No worries! Enter your email and we'll send you an OTP." :
-                         step === 2 ? "Enter the OTP sent to your email and create a new password." :
-                         "Your password has been reset successfully!"}
-                    </p>
-                </div>
+            <div className="w-full max-w-md relative z-10">
+                <div className="w-full bg-black/40 backdrop-blur-md border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl max-h-[92vh] overflow-y-auto">
+                    <Link
+                        to="/login"
+                        className="inline-flex items-center gap-2 text-[12px] font-bold text-[#FBBF24] hover:text-white transition-colors mb-6"
+                    >
+                        <HiArrowLeft className="text-base" />
+                        Back to Login
+                    </Link>
 
-                {step === 1 ? (
-                    // Step 1: Email Input
-                    <>
-                        <input
-                            type="email"
-                            placeholder="Enter your email address"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSendOTP()}
-                            className="w-[80%] p-3 rounded-lg text-white outline-none hover:border-2"
-                            disabled={loading}
-                        />
-
-                        <button
-                            onClick={handleSendOTP}
-                            disabled={loading}
-                            className="w-[80%] p-3 bg-amber-500 rounded-lg font-bold hover:bg-amber-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? "Sending..." : "Send OTP"}
-                        </button>
-
-                        <p className="text-sm">
-                            Remember your password?{" "}
-                            <Link to="/login" className="text-amber-300 hover:text-amber-200 cursor-pointer">
-                                Sign in
-                            </Link>
+                    <div className="mb-8 text-center">
+                        <div className="mx-auto w-14 h-14 bg-[#FBBF24] rounded-full flex items-center justify-center mb-4 shadow-lg">
+                            {step === 1 ? <HiMail className="text-2xl text-slate-900" /> :
+                                step === 2 ? <HiKey className="text-2xl text-slate-900" /> :
+                                    <HiLockClosed className="text-2xl text-slate-900" />}
+                        </div>
+                        <h1 className="text-3xl sm:text-4xl font-black text-white mb-2 tracking-tight">
+                            {step === 1 ? "Forgot Password" :
+                                step === 2 ? "Verify OTP" :
+                                    "Password Reset"}
+                        </h1>
+                        <p className="text-sm text-white/60 font-medium leading-relaxed">
+                            {step === 1 ? "Enter your email and we will send a one-time password." :
+                                step === 2 ? "Use the OTP from your email and set a new secure password." :
+                                    "Your password has been reset successfully."}
                         </p>
-                    </>
-                ) : step === 2 ? (
-                    // Step 2: OTP & Password Reset
-                    <>
-                        <div className="w-[80%] bg-amber-500/20 border border-amber-500/50 rounded-lg p-3 text-center">
-                            <p className="text-amber-200 text-sm">
-                                OTP sent to <strong>{email}</strong>
-                            </p>
-                        </div>
+                    </div>
 
-                        <input
-                            type="text"
-                            placeholder="Enter 6-digit OTP"
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            maxLength={6}
-                            className="w-[80%] p-3 rounded-lg text-white outline-none hover:border-2 tracking-widest text-center font-semibold"
-                            disabled={loading}
-                        />
+                    {step === 1 ? (
+                        <div className="space-y-5">
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-white/70 uppercase tracking-widest ml-1">Email</label>
+                                <input
+                                    type="email"
+                                    placeholder="Enter your email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleSendOTP()}
+                                    className={inputClassName}
+                                    disabled={loading}
+                                />
+                            </div>
 
-                        <input
-                            type="password"
-                            placeholder="New password"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            className="w-[80%] p-3 rounded-lg text-white outline-none hover:border-2"
-                            disabled={loading}
-                        />
-
-                        <input
-                            type="password"
-                            placeholder="Confirm new password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleResetPassword()}
-                            className="w-[80%] p-3 rounded-lg text-white outline-none hover:border-2"
-                            disabled={loading}
-                        />
-
-                        <button
-                            onClick={handleResetPassword}
-                            disabled={loading}
-                            className="w-[80%] p-3 bg-amber-500 rounded-lg font-bold hover:bg-amber-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? "Resetting..." : "Reset Password"}
-                        </button>
-
-                        <div className="text-center">
-                            <p className="text-sm text-white/80 mb-2">
-                                Didn't receive the OTP?
-                            </p>
                             <button
-                                onClick={() => {
-                                    setStep(1);
-                                    setOtp("");
-                                    setNewPassword("");
-                                    setConfirmPassword("");
-                                }}
-                                className="text-amber-300 hover:text-amber-200 font-semibold text-sm cursor-pointer"
+                                onClick={handleSendOTP}
+                                disabled={loading}
+                                className="w-full mt-2 p-3.5 sm:p-4 bg-[#FBBF24] text-slate-900 rounded-xl font-bold text-[15px] hover:bg-[#f5b000] active:scale-[0.98] transition-all shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
                             >
-                                Resend OTP
+                                {loading ? "Sending..." : "Send OTP"}
                             </button>
-                        </div>
-                    </>
-                ) : (
-                    // Step 3: Success State
-                    <>
-                        <div className="w-[80%] bg-green-500/20 border border-green-500/50 rounded-lg p-4 text-center">
-                            <p className="text-green-200 text-sm">
-                                Your password has been reset successfully!
+
+                            <p className="text-sm text-center font-medium text-white/60 pt-2">
+                                Remember your password?{" "}
+                                <Link to="/login" className="font-bold text-[#FBBF24] hover:text-white transition-colors">
+                                    Sign in
+                                </Link>
                             </p>
                         </div>
+                    ) : step === 2 ? (
+                        <div className="space-y-5">
+                            <div className="w-full bg-[#FBBF24]/15 border border-[#FBBF24]/40 rounded-xl p-3 text-center">
+                                <p className="text-[#FCD34D] text-sm font-medium break-all">
+                                    OTP sent to {email}
+                                </p>
+                            </div>
 
-                        <Link
-                            to="/login"
-                            className="w-[80%] p-3 bg-amber-500 rounded-lg font-bold hover:bg-amber-600 text-center hover:text-white transition-colors"
-                        >
-                            Go to Login
-                        </Link>
-                    </>
-                )}
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-white/70 uppercase tracking-widest ml-1">OTP</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter 6-digit OTP"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                    maxLength={6}
+                                    className={`${inputClassName} tracking-[0.35em] text-center font-semibold`}
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-white/70 uppercase tracking-widest ml-1">New Password</label>
+                                <input
+                                    type="password"
+                                    placeholder="Enter new password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className={inputClassName}
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-white/70 uppercase tracking-widest ml-1">Confirm Password</label>
+                                <input
+                                    type="password"
+                                    placeholder="Confirm new password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleResetPassword()}
+                                    className={inputClassName}
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            <button
+                                onClick={handleResetPassword}
+                                disabled={loading}
+                                className="w-full p-3.5 sm:p-4 bg-[#FBBF24] text-slate-900 rounded-xl font-bold text-[15px] hover:bg-[#f5b000] active:scale-[0.98] transition-all shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {loading ? "Resetting..." : "Reset Password"}
+                            </button>
+
+                            <div className="text-center pt-1">
+                                <p className="text-sm text-white/60 mb-2">Didn't receive the OTP?</p>
+                                <button
+                                    onClick={() => {
+                                        setStep(1);
+                                        setOtp("");
+                                        setNewPassword("");
+                                        setConfirmPassword("");
+                                    }}
+                                    className="text-[12px] font-bold text-[#FBBF24] hover:text-white transition-colors"
+                                >
+                                    Resend OTP
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-5">
+                            <div className="w-full bg-emerald-500/20 border border-emerald-500/40 rounded-xl p-4 text-center">
+                                <p className="text-emerald-200 text-sm font-medium">
+                                    Your password has been reset successfully!
+                                </p>
+                            </div>
+
+                            <Link
+                                to="/login"
+                                className="w-full block p-3.5 sm:p-4 bg-[#FBBF24] text-slate-900 rounded-xl font-bold text-[15px] hover:bg-[#f5b000] text-center active:scale-[0.98] transition-all shadow-xl"
+                            >
+                                Go to Login
+                            </Link>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

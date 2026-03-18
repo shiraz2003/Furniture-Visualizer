@@ -1,9 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
-import { FaTrash} from 'react-icons/fa';
-import { FaShoppingCart } from 'react-icons/fa';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FaTrash, FaShoppingCart, FaPlus, FaMinus } from 'react-icons/fa';
 import Navbar from "../components/Navbar";
 import { useDesign } from '../context/DesignContext';
 import axios from 'axios';
@@ -12,7 +10,10 @@ export default function Cart() {
     const [cartItems, setCartItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const location = useLocation();
+    const processingPayPalReturnRef = useRef(false);
     const { room } = useDesign();
+    const PENDING_ORDER_KEY = 'pendingFurnitureOrder';
     
     // Order form state
     const [showOrderForm, setShowOrderForm] = useState(false);
@@ -24,7 +25,6 @@ export default function Cart() {
         city: '',
         zipCode: '',
         notes: '',
-        // Room setup fields
         roomWidth: room.width,
         roomLength: room.length,
         roomHeight: room.height,
@@ -33,26 +33,155 @@ export default function Cart() {
     });
     const [submittingOrder, setSubmittingOrder] = useState(false);
 
+    const cartTotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    const taxAmount = cartTotal * 0.08; 
+    const finalTotal = cartTotal + taxAmount;
+
+    const clamp = (value, min, max, fallback) => {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return fallback;
+        return Math.min(max, Math.max(min, num));
+    };
+
+    const normalizeHexColor = (value, fallback) => {
+        const color = String(value || '').trim();
+        const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+        return hexColorRegex.test(color) ? color : fallback;
+    };
+
+    const normalizeItemImage = (imageValue) => {
+        if (Array.isArray(imageValue)) {
+            return imageValue.find((img) => typeof img === 'string' && img.trim().length > 0) || '';
+        }
+        return typeof imageValue === 'string' ? imageValue : '';
+    };
+
+    const buildOrderData = () => {
+        const normalizedRoomSetup = {
+            width: clamp(orderFormData.roomWidth, 1, 20, 5),
+            length: clamp(orderFormData.roomLength, 1, 20, 5),
+            height: clamp(orderFormData.roomHeight, 2, 5, 3),
+            wallColor: normalizeHexColor(orderFormData.wallColor, '#ffffff'),
+            floorColor: normalizeHexColor(orderFormData.floorColor, '#f5f5f5')
+        };
+
+        return {
+        customer: {
+            name: orderFormData.customerName,
+            email: orderFormData.email,
+            phone: orderFormData.phone,
+            address: {
+                street: orderFormData.address,
+                city: orderFormData.city,
+                zipCode: orderFormData.zipCode
+            }
+        },
+        roomSetup: normalizedRoomSetup,
+        items: cartItems.map((item) => ({
+            _id: String(item?._id || ''),
+            name: String(item?.name || 'Furniture Item'),
+            price: Number(item?.price) || 0,
+            quantity: Math.max(1, Number(item?.quantity) || 1),
+            category: item?.category ? String(item.category) : undefined,
+            image: normalizeItemImage(item?.image)
+        })),
+        pricing: {
+            subtotal: cartTotal,
+            tax: taxAmount,
+            total: finalTotal
+        },
+        notes: orderFormData.notes,
+        orderDate: new Date().toISOString()
+    };
+    };
+
     useEffect(() => {
         loadCartItems();
-        
-        // Listen for cart updates
         const handleCartUpdate = () => {
             loadCartItems();
         };
-        
         window.addEventListener('cartUpdated', handleCartUpdate);
         return () => {
             window.removeEventListener('cartUpdated', handleCartUpdate);
         };
     }, []);
 
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const paypalOrderId = params.get('token');
+        const cancelled = params.get('paypal') === 'cancel';
+
+        if (cancelled) {
+            toast.error('PayPal payment was cancelled');
+            navigate('/cart', { replace: true });
+            return;
+        }
+
+        if (!paypalOrderId || processingPayPalReturnRef.current) {
+            return;
+        }
+
+        const finalizePayPalPayment = async () => {
+            processingPayPalReturnRef.current = true;
+            setSubmittingOrder(true);
+
+            try {
+                const pendingRaw = sessionStorage.getItem(PENDING_ORDER_KEY);
+                if (!pendingRaw) {
+                    throw new Error('No pending order found for this payment');
+                }
+
+                const pendingData = JSON.parse(pendingRaw);
+                const orderData = pendingData?.orderData;
+
+                if (!orderData) {
+                    throw new Error('Pending order data is invalid');
+                }
+
+                const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                const authHeaders = { Authorization: `Bearer ${localStorage.getItem('token')}` };
+
+                await axios.post(
+                    `${apiUrl}/api/admin/orders/paypal/capture`,
+                    { orderId: paypalOrderId },
+                    { headers: authHeaders }
+                );
+
+                await axios.post(
+                    `${apiUrl}/api/admin/orders`,
+                    orderData,
+                    { headers: authHeaders }
+                );
+
+                sessionStorage.removeItem(PENDING_ORDER_KEY);
+                localStorage.removeItem('furnitureCart');
+                setCartItems([]);
+                setShowOrderForm(false);
+                window.dispatchEvent(new Event('cartUpdated'));
+                toast.success('Payment successful! Order submitted.');
+            } catch (error) {
+                console.error('Error finalizing PayPal payment:', error);
+                const serverMessage = error?.response?.data?.message;
+                const validationErrors = error?.response?.data?.errors;
+                const detailedMessage = Array.isArray(validationErrors) && validationErrors.length > 0
+                    ? `${serverMessage || 'Validation error'}: ${validationErrors[0]}`
+                    : (serverMessage || error?.message || 'Failed to finalize PayPal payment');
+                toast.error(detailedMessage);
+            } finally {
+                setSubmittingOrder(false);
+                processingPayPalReturnRef.current = false;
+                navigate('/cart', { replace: true });
+            }
+        };
+
+        finalizePayPalPayment();
+    }, [location.search, navigate]);
+
     const loadCartItems = () => {
         try {
             const items = JSON.parse(localStorage.getItem('furnitureCart')) || [];
             setCartItems(items);
-        } catch (error) {
-            console.error('Error loading cart:', error);
+        } catch {
             toast.error('Failed to load cart items');
         } finally {
             setLoading(false);
@@ -61,20 +190,14 @@ export default function Cart() {
 
     const handleUpdateQuantity = (itemId, newQuantity) => {
         if (newQuantity < 1) return;
-        
         try {
             const updatedItems = cartItems.map(item => 
                 item._id === itemId ? { ...item, quantity: newQuantity } : item
             );
-            
             setCartItems(updatedItems);
             localStorage.setItem('furnitureCart', JSON.stringify(updatedItems));
-            
-            toast.success('Quantity updated');
-            // Dispatch event for navbar update
             window.dispatchEvent(new Event('cartUpdated'));
-        } catch (error) {
-            console.error('Error updating quantity:', error);
+        } catch {
             toast.error('Failed to update quantity');
         }
     };
@@ -84,12 +207,9 @@ export default function Cart() {
             const updatedItems = cartItems.filter(item => item._id !== itemId);
             setCartItems(updatedItems);
             localStorage.setItem('furnitureCart', JSON.stringify(updatedItems));
-            
-            toast.success(`${itemName} removed from cart`);
-            // Dispatch event for navbar update
+            toast.success(`${itemName} removed`);
             window.dispatchEvent(new Event('cartUpdated'));
-        } catch (error) {
-            console.error('Error removing item:', error);
+        } catch {
             toast.error('Failed to remove item');
         }
     };
@@ -98,11 +218,9 @@ export default function Cart() {
         try {
             localStorage.removeItem('furnitureCart');
             setCartItems([]);
-            toast.success('Cart cleared successfully');
-            // Dispatch event for navbar update
+            toast.success('Cart cleared');
             window.dispatchEvent(new Event('cartUpdated'));
-        } catch (error) {
-            console.error('Error clearing cart:', error);
+        } catch {
             toast.error('Failed to clear cart');
         }
     };
@@ -125,280 +243,163 @@ export default function Cart() {
     
     const handleSubmitOrder = async (e) => {
         e.preventDefault();
-        
-        // Validate required fields
         if (!orderFormData.customerName || !orderFormData.email || !orderFormData.phone || !orderFormData.address) {
             toast.error('Please fill in all required fields');
             return;
         }
-        
+
+        if (cartItems.length === 0) {
+            toast.error('Your cart is empty');
+            return;
+        }
+
         setSubmittingOrder(true);
-        
         try {
-            const orderData = {
-                customer: {
-                    name: orderFormData.customerName,
-                    email: orderFormData.email,
-                    phone: orderFormData.phone,
-                    address: {
-                        street: orderFormData.address,
-                        city: orderFormData.city,
-                        zipCode: orderFormData.zipCode
-                    }
-                },
-                roomSetup: {
-                    width: orderFormData.roomWidth,
-                    length: orderFormData.roomLength,
-                    height: orderFormData.roomHeight,
-                    wallColor: orderFormData.wallColor,
-                    floorColor: orderFormData.floorColor
-                },
-                items: cartItems,
-                pricing: {
-                    subtotal: cartTotal,
-                    tax: taxAmount,
-                    total: finalTotal
-                },
-                notes: orderFormData.notes,
-                orderDate: new Date().toISOString()
-            };
-            
+            const orderData = buildOrderData();
             const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-            await axios.post(`${apiUrl}/api/admin/orders`, orderData, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`
-                }
+            const returnUrl = `${window.location.origin}/cart`;
+            const cancelUrl = `${window.location.origin}/cart?paypal=cancel`;
+
+            sessionStorage.setItem(PENDING_ORDER_KEY, JSON.stringify({ orderData, createdAt: Date.now() }));
+
+            const response = await axios.post(`${apiUrl}/api/admin/orders/paypal/create`, {
+                total: Number(finalTotal).toFixed(2),
+                currency: 'LKR',
+                returnUrl,
+                cancelUrl
+            }, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
-            
-            // Clear cart and form
-            localStorage.removeItem('furnitureCart');
-            setCartItems([]);
-            setOrderFormData({
-                customerName: '',
-                email: '',
-                phone: '',
-                address: '',
-                city: '',
-                zipCode: '',
-                notes: '',
-                roomWidth: room.width,
-                roomLength: room.length,
-                roomHeight: room.height,
-                wallColor: room.wallColor,
-                floorColor: room.floorColor
-            });
-            setShowOrderForm(false);
-            
-            toast.success('Order submitted successfully! Admin has been notified.');
-            window.dispatchEvent(new Event('cartUpdated'));
-            
+
+            const payableCurrency = response?.data?.data?.payableCurrency;
+            const payableTotal = response?.data?.data?.payableTotal;
+            if (payableCurrency && payableTotal) {
+                toast.success(`Redirecting to PayPal (${payableCurrency} ${payableTotal})...`);
+            }
+
+            const approvalUrl = response?.data?.data?.approvalUrl;
+            if (!approvalUrl) {
+                throw new Error('PayPal approval URL not received');
+            }
+
+            window.location.href = approvalUrl;
         } catch (error) {
-            console.error('Error submitting order:', error);
-            toast.error('Failed to submit order. Please try again.');
+            sessionStorage.removeItem(PENDING_ORDER_KEY);
+            const serverMessage = error?.response?.data?.message;
+            const validationErrors = error?.response?.data?.errors;
+            const detailedMessage = Array.isArray(validationErrors) && validationErrors.length > 0
+                ? `${serverMessage || 'Validation error'}: ${validationErrors[0]}`
+                : (serverMessage || error?.message || 'Failed to start PayPal checkout');
+            toast.error(detailedMessage);
         } finally {
             setSubmittingOrder(false);
         }
     };
 
-    const cartTotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-    const taxAmount = cartTotal * 0.08; // 8% tax
-    const finalTotal = cartTotal + taxAmount;
-
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-                <Navbar />
-                <div className="flex justify-center items-center min-h-[50vh]">
-                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
-                </div>
+            <div className="min-h-screen bg-[#fbfbfe] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-[#2f27ce]"></div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="min-h-screen bg-[#fbfbfe] text-[#050315] font-sans selection:bg-[#2f27ce] selection:text-white">
             <Navbar />
             
-            <div className="container mx-auto px-4 py-6 max-w-6xl">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-                    <div className="flex items-center gap-3 mb-4 sm:mb-0">
-                        <FaShoppingCart className="h-6 w-6 text-amber-600" />
-                        <h1 className="text-2xl sm:text-3xl font-bold text-white">Your Cart</h1>
-                        <span className="text-sm font-medium px-3 py-1 rounded-full bg-amber-600/20 text-amber-400">
-                            {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
-                        </span>
+            <div className="container mx-auto px-4 pt-32 pb-20 max-w-6xl">
+                {/* Header Section */}
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 flex items-center gap-3">
+                            <FaShoppingCart className="text-[#2f27ce]" /> Your Cart
+                        </h1>
+                        <p className="text-[#050315]/50 font-medium uppercase tracking-widest text-xs">
+                            {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in your bag
+                        </p>
                     </div>
-                    
                     {cartItems.length > 0 && (
-                        <button
-                            onClick={handleClearCart}
-                            className="font-medium text-sm px-4 py-2 border border-red-400 text-red-400 rounded-md hover:bg-red-400/10 transition-colors duration-200"
-                        >
-                            Clear All
+                        <button onClick={handleClearCart} className="text-rose-600 font-bold text-sm hover:text-rose-700 transition-colors underline underline-offset-4">
+                            Empty Cart
                         </button>
                     )}
                 </div>
 
                 {cartItems.length === 0 ? (
-                    /* Empty Cart State */
-                    <div className="text-center py-16 bg-white/5 backdrop-blur-md rounded-2xl border border-white/20">
-                        <FaShoppingCart className="h-24 w-24 text-slate-500 mx-auto mb-6" />
-                        <h2 className="text-2xl font-semibold text-white mb-4">Your cart is empty</h2>
-                        <p className="text-slate-300 mb-8">Discover our amazing furniture collection!</p>
-                        <button
-                            onClick={() => navigate('/furniture')}
-                            className="font-semibold px-8 py-3 rounded-lg bg-amber-600 hover:bg-amber-700 transition-colors duration-200 inline-flex items-center gap-2 text-white"
-                        >
-                            <FaShoppingCart className="h-5 w-5" />
-                            Start Shopping
+                    <div className="text-center py-20 bg-white rounded-[2rem] border border-[#dedcff]/50 shadow-xl shadow-[#050315]/5">
+                        <FaShoppingCart className="h-20 w-20 text-[#dedcff] mx-auto mb-6" />
+                        <h2 className="text-2xl font-black text-[#050315] mb-2">Your cart is empty</h2>
+                        <p className="text-[#050315]/50 mb-8 font-medium">Looks like you haven't added anything yet.</p>
+                        <button onClick={() => navigate('/furniture')} className="bg-[#2f27ce] text-white font-bold px-8 py-3.5 rounded-xl hover:bg-[#433bff] transition-all shadow-lg shadow-[#2f27ce]/20 active:scale-95">
+                            Start Exploring
                         </button>
                     </div>
                 ) : (
-                    /* Cart Items */
-                    <div className="flex flex-col xl:flex-row gap-8">
+                    <div className="flex flex-col lg:flex-row gap-10">
                         {/* Cart Items List */}
-                        <div className="xl:w-2/3">
-                            <div className="space-y-4">
-                                {cartItems.map((item) => (
-                                    <div
-                                        key={item._id}
-                                        className="rounded-lg shadow-md p-4 sm:p-6 border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/15 transition-all duration-200"
-                                    >
-                                        <div className="flex flex-col sm:flex-row gap-4">
-                                            {/* Product Image */}
-                                            <div className="w-full sm:w-32 h-32 flex-shrink-0">
-                                                <img
-                                                    src={item.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzljYTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkZ1cm5pdHVyZTwvdGV4dD48L3N2Zz4='}
-                                                    alt={item.name}
-                                                    className="w-full h-32 object-cover rounded-md bg-gray-100" 
-                                                    onError={(e) => {
-                                                        // Use a simple colored div as final fallback
-                                                        e.target.style.display = 'none';
-                                                        const fallback = e.target.nextElementSibling;
-                                                        if (fallback) fallback.style.display = 'flex';
-                                                    }}
-                                                />
-                                                <div 
-                                                    style={{ display: 'none' }}
-                                                    className="w-full h-32 bg-slate-600 rounded-md flex items-center justify-center text-slate-300 text-sm"
-                                                >
-                                                    🪑 {item.name || 'Furniture'}
+                        <div className="lg:w-2/3 space-y-6">
+                            {cartItems.map((item) => (
+                                <div key={item._id} className="bg-white rounded-3xl p-5 border border-[#dedcff]/50 shadow-sm hover:shadow-md transition-all group">
+                                    <div className="flex flex-col sm:flex-row gap-6">
+                                        <div className="w-full sm:w-32 h-32 flex-shrink-0 bg-[#fbfbfe] rounded-2xl overflow-hidden border border-[#dedcff]/30">
+                                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                        </div>
+                                        
+                                        <div className="flex-1 flex flex-col justify-between">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <h3 className="text-lg font-black text-[#050315] leading-tight mb-1">{item.name}</h3>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#2f27ce] bg-[#dedcff] px-2 py-0.5 rounded">
+                                                        {item.category}
+                                                    </span>
                                                 </div>
+                                                <button onClick={() => handleRemoveItem(item._id, item.name)} className="text-[#050315]/20 hover:text-rose-500 transition-colors p-2">
+                                                    <FaTrash size={16} />
+                                                </button>
                                             </div>
-                                            
-                                            {/* Product Details */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
-                                                    <div className="flex-1">
-                                                        <h3 className="text-lg font-semibold text-white mb-1 truncate">
-                                                            {item.name || 'Unknown Item'}
-                                                        </h3>
-                                                        <p className="text-sm text-slate-300 mb-2">
-                                                            {item.category && <span className="inline-block bg-amber-600/20 text-amber-400 px-2 py-1 rounded mr-2">{item.category}</span>}
-                                                        </p>
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <span className="text-sm text-slate-300">Quantity:</span>
-                                                            <div className="flex items-center gap-1">
-                                                                <button
-                                                                    onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)}
-                                                                    disabled={item.quantity <= 1}
-                                                                    className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-700 text-white hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                                                                    title="Decrease quantity"
-                                                                >
-                                                                    -
-                                                                </button>
-                                                                <input
-                                                                    type="number"
-                                                                    min="1"
-                                                                    max="10"
-                                                                    value={item.quantity || 1}
-                                                                    onChange={(e) => {
-                                                                        const qty = parseInt(e.target.value);
-                                                                        if (qty >= 1 && qty <= 10) {
-                                                                            handleUpdateQuantity(item._id, qty);
-                                                                        }
-                                                                    }}
-                                                                    className="w-16 px-2 py-1 text-center border border-slate-600 bg-slate-700 text-white rounded text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                                                    title="Set quantity"
-                                                                />
-                                                                <button
-                                                                    onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}
-                                                                    disabled={item.quantity >= 10}
-                                                                    className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-700 text-white hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                                                                    title="Increase quantity"
-                                                                >
-                                                                    +
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {/* Price and Actions */}
-                                                    <div className="flex flex-col items-end gap-3">
-                                                        <div className="text-right">
-                                                            <div className="text-xl font-bold text-green-400">
-                                                                ${(item.price * item.quantity).toFixed(2)}
-                                                            </div>
-                                                            <div className="text-sm text-slate-400">
-                                                                ${item.price?.toFixed(2) || '0.00'} × {item.quantity}
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <button
-                                                            onClick={() => handleRemoveItem(item._id, item.name)}
-                                                            className="p-2 rounded-md bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors duration-200 flex items-center gap-1"
-                                                            title="Remove from cart"
-                                                        >
-                                                            <FaTrash className="h-4 w-4" />
-                                                            <span className="hidden sm:inline text-sm">Remove</span>
-                                                        </button>
-                                                    </div>
+
+                                            <div className="flex flex-wrap items-end justify-between gap-4 mt-4">
+                                                <div className="flex items-center gap-4 bg-[#fbfbfe] px-3 py-2 rounded-xl border border-[#dedcff]">
+                                                    <button onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)} disabled={item.quantity <= 1} className="text-[#2f27ce] disabled:text-[#dedcff] transition-colors"><FaMinus size={12}/></button>
+                                                    <span className="font-black text-[#050315] min-w-[20px] text-center">{item.quantity}</span>
+                                                    <button onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)} className="text-[#2f27ce] transition-colors"><FaPlus size={12}/></button>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-xs font-bold text-[#050315]/40 line-through">Rs. {(item.price * 1.1).toLocaleString()}</p>
+                                                    <p className="text-xl font-black text-[#2f27ce]">Rs. {(item.price * item.quantity).toLocaleString()}</p>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ))}
                         </div>
                         
                         {/* Cart Summary */}
-                        <div className="xl:w-1/3">
-                            <div className="rounded-lg shadow-md p-6 border border-white/20 bg-white/10 backdrop-blur-md sticky top-6">
-                                <h2 className="text-xl font-semibold text-white mb-4">Order Summary</h2>
-                                
-                                <div className="space-y-3">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-300">Items ({cartItems.length}):</span>
-                                        <span className="font-medium text-white">${cartTotal.toFixed(2)}</span>
+                        <div className="lg:w-1/3">
+                            <div className="bg-white rounded-[2rem] p-8 border border-[#dedcff]/50 shadow-xl shadow-[#050315]/5 sticky top-32">
+                                <h2 className="text-xl font-black text-[#050315] mb-6">Order Summary</h2>
+                                <div className="space-y-4 mb-8">
+                                    <div className="flex justify-between text-sm font-bold text-[#050315]/60">
+                                        <span>Subtotal</span>
+                                        <span>Rs. {cartTotal.toLocaleString()}</span>
                                     </div>
-                                    
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-slate-300">Tax (8%):</span>
-                                        <span className="font-medium text-white">${taxAmount.toFixed(2)}</span>
+                                    <div className="flex justify-between text-sm font-bold text-[#050315]/60">
+                                        <span>Tax (8%)</span>
+                                        <span>Rs. {taxAmount.toLocaleString()}</span>
                                     </div>
-                                    
-                                    <hr className="border-white/20" />
-                                    
-                                    <div className="flex justify-between text-lg font-semibold">
-                                        <span className="text-white">Total:</span>
-                                        <span className="text-green-400">${finalTotal.toFixed(2)}</span>
+                                    <div className="h-px bg-[#dedcff] w-full my-2"></div>
+                                    <div className="flex justify-between items-end">
+                                        <span className="font-black text-[#050315]">Total</span>
+                                        <span className="text-2xl font-black text-[#2f27ce]">Rs. {finalTotal.toLocaleString()}</span>
                                     </div>
                                 </div>
-                                
-                                <button
-                                    onClick={handleCheckout}
-                                    className="w-full text-white font-semibold py-3 px-4 rounded-lg mt-6 bg-amber-600 hover:bg-amber-700 transition-colors duration-200 flex items-center justify-center gap-2"
-                                >
-                                    <FaShoppingCart className="h-5 w-5" />
-                                    Place Order
+                                <button onClick={handleCheckout} className="w-full bg-[#2f27ce] text-white font-black py-4 rounded-2xl hover:bg-[#433bff] transition-all shadow-lg shadow-[#2f27ce]/20 active:scale-95 mb-4">
+                                    Proceed to Checkout
                                 </button>
-                                
-                                <button
-                                    onClick={() => navigate('/furniture')}
-                                    className="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-4 rounded-lg mt-3 transition-colors duration-200"
-                                >
-                                    Continue Shopping
+                                <button onClick={() => navigate('/furniture')} className="w-full bg-white text-[#050315] border-2 border-[#dedcff] font-bold py-4 rounded-2xl hover:bg-[#fbfbfe] transition-all">
+                                    Keep Shopping
                                 </button>
                             </div>
                         </div>
@@ -407,236 +408,62 @@ export default function Cart() {
                 
                 {/* Order Form Modal */}
                 {showOrderForm && (
-                    <div className="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-slate-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20">
-                            <h2 className="text-2xl font-bold text-white mb-6">Complete Your Order</h2>
-                            
-                            {/* Room Setup Summary */}
-                            <div className="mb-6 p-4 bg-amber-600/20 rounded-lg border border-amber-600/30">
-                                <h3 className="text-lg font-semibold text-amber-400 mb-2">Room Setup Details</h3>
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div><span className="text-slate-300">Dimensions:</span> <span className="text-white">{orderFormData.roomWidth}m × {orderFormData.roomLength}m × {orderFormData.roomHeight}m</span></div>
-                                    <div><span className="text-slate-300">Wall Color:</span> <span className="text-white">{orderFormData.wallColor}</span></div>
-                                    <div><span className="text-slate-300">Floor Color:</span> <span className="text-white">{orderFormData.floorColor}</span></div>
+                    <div className="fixed inset-0 bg-[#050315]/60 backdrop-blur-md flex items-center justify-center p-4 z-[100] animate-in fade-in duration-300">
+                        <div className="bg-white rounded-[2.5rem] p-8 md:p-10 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-[#dedcff] scrollbar-hide">
+                            <div className="flex justify-between items-start mb-8">
+                                <div>
+                                    <h2 className="text-2xl font-black text-[#050315]">Checkout Details</h2>
+                                    <p className="text-[#050315]/50 text-sm font-medium">Please provide your delivery information.</p>
                                 </div>
+                                <button onClick={() => setShowOrderForm(false)} className="bg-[#fbfbfe] p-2 rounded-full border border-[#dedcff] text-[#050315]/40 hover:text-[#050315] transition-colors">
+                                    <FaPlus className="rotate-45" />
+                                </button>
                             </div>
                             
-                            {/* Order Summary */}
-                            <div className="mb-6 p-4 bg-slate-700/50 rounded-lg">
-                                <h3 className="text-lg font-semibold text-white mb-2">Order Summary</h3>
-                                <div className="space-y-1 text-sm">
-                                    <div className="flex justify-between"><span className="text-slate-300">Items:</span><span className="text-white">${cartTotal.toFixed(2)}</span></div>
-                                    <div className="flex justify-between"><span className="text-slate-300">Tax:</span><span className="text-white">${taxAmount.toFixed(2)}</span></div>
-                                    <div className="flex justify-between text-lg font-semibold"><span className="text-green-400">Total:</span><span className="text-green-400">${finalTotal.toFixed(2)}</span></div>
-                                </div>
-                            </div>
-                            
-                            {/* Customer Information Form */}
                             <form onSubmit={handleSubmitOrder} className="space-y-6">
-                                {/* Room Setup Fields */}
-                                <div className="border border-slate-600 rounded-lg p-4">
-                                    <h4 className="text-lg font-semibold text-white mb-4">Customize Room Setup</h4>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1">Width (meters)</label>
-                                            <input
-                                                type="number"
-                                                name="roomWidth"
-                                                value={orderFormData.roomWidth}
-                                                onChange={handleOrderFormChange}
-                                                min="1"
-                                                max="20"
-                                                step="0.1"
-                                                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                                placeholder="Width"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1">Length (meters)</label>
-                                            <input
-                                                type="number"
-                                                name="roomLength"
-                                                value={orderFormData.roomLength}
-                                                onChange={handleOrderFormChange}
-                                                min="1"
-                                                max="20"
-                                                step="0.1"
-                                                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                                placeholder="Length"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1">Height (meters)</label>
-                                            <input
-                                                type="number"
-                                                name="roomHeight"
-                                                value={orderFormData.roomHeight}
-                                                onChange={handleOrderFormChange}
-                                                min="2"
-                                                max="5"
-                                                step="0.1"
-                                                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                                placeholder="Height"
-                                            />
-                                        </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#050315]/40 ml-1">Full Name</label>
+                                        <input type="text" name="customerName" value={orderFormData.customerName} onChange={handleOrderFormChange} required className="w-full px-4 py-3.5 bg-[#fbfbfe] border-2 border-transparent focus:border-[#2f27ce] rounded-xl outline-none font-bold text-[#050315] transition-all" placeholder="John Doe" />
                                     </div>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1">Wall Color</label>
-                                            <div className="flex items-center gap-3">
-                                                <input
-                                                    type="color"
-                                                    name="wallColor"
-                                                    value={orderFormData.wallColor}
-                                                    onChange={handleOrderFormChange}
-                                                    className="w-12 h-10 bg-slate-700 border border-slate-600 rounded cursor-pointer"
-                                                />
-                                                <input
-                                                    type="text"
-                                                    name="wallColor"
-                                                    value={orderFormData.wallColor}
-                                                    onChange={handleOrderFormChange}
-                                                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                                    placeholder="#ffffff"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-300 mb-1">Floor Color</label>
-                                            <div className="flex items-center gap-3">
-                                                <input
-                                                    type="color"
-                                                    name="floorColor"
-                                                    value={orderFormData.floorColor}
-                                                    onChange={handleOrderFormChange}
-                                                    className="w-12 h-10 bg-slate-700 border border-slate-600 rounded cursor-pointer"
-                                                />
-                                                <input
-                                                    type="text"
-                                                    name="floorColor"
-                                                    value={orderFormData.floorColor}
-                                                    onChange={handleOrderFormChange}
-                                                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                                    placeholder="#8B4513"
-                                                />
-                                            </div>
-                                        </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#050315]/40 ml-1">Email Address</label>
+                                        <input type="email" name="email" value={orderFormData.email} onChange={handleOrderFormChange} required className="w-full px-4 py-3.5 bg-[#fbfbfe] border-2 border-transparent focus:border-[#2f27ce] rounded-xl outline-none font-bold text-[#050315] transition-all" placeholder="john@example.com" />
                                     </div>
                                 </div>
-                                
-                                {/* Customer Information */}
-                                <div className="border border-slate-600 rounded-lg p-4">
-                                    <h4 className="text-lg font-semibold text-white mb-4">Customer Information</h4>
-                                    
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-1">Customer Name *</label>
-                                        <input
-                                            type="text"
-                                            name="customerName"
-                                            value={orderFormData.customerName}
-                                            onChange={handleOrderFormChange}
-                                            required
-                                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                            placeholder="Enter your full name"
-                                        />
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#050315]/40 ml-1">Phone Number</label>
+                                        <input type="tel" name="phone" value={orderFormData.phone} onChange={handleOrderFormChange} required className="w-full px-4 py-3.5 bg-[#fbfbfe] border-2 border-transparent focus:border-[#2f27ce] rounded-xl outline-none font-bold text-[#050315] transition-all" placeholder="+94 XX XXX XXXX" />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-1">Email *</label>
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            value={orderFormData.email}
-                                            onChange={handleOrderFormChange}
-                                            required
-                                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                            placeholder="your@email.com"
-                                        />
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#050315]/40 ml-1">City</label>
+                                        <input type="text" name="city" value={orderFormData.city} onChange={handleOrderFormChange} className="w-full px-4 py-3.5 bg-[#fbfbfe] border-2 border-transparent focus:border-[#2f27ce] rounded-xl outline-none font-bold text-[#050315] transition-all" placeholder="Colombo" />
                                     </div>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#050315]/40 ml-1">Delivery Address</label>
+                                    <input type="text" name="address" value={orderFormData.address} onChange={handleOrderFormChange} required className="w-full px-4 py-3.5 bg-[#fbfbfe] border-2 border-transparent focus:border-[#2f27ce] rounded-xl outline-none font-bold text-[#050315] transition-all" placeholder="No 123, Galle Road" />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#050315]/40 ml-1">Additional Notes</label>
+                                    <textarea name="notes" value={orderFormData.notes} onChange={handleOrderFormChange} rows="2" className="w-full px-4 py-3.5 bg-[#fbfbfe] border-2 border-transparent focus:border-[#2f27ce] rounded-xl outline-none font-bold text-[#050315] transition-all resize-none" placeholder="Any special requests?"></textarea>
+                                </div>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-1">Phone *</label>
-                                        <input
-                                            type="tel"
-                                            name="phone"
-                                            value={orderFormData.phone}
-                                            onChange={handleOrderFormChange}
-                                            required
-                                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                            placeholder="Phone number"
-                                        />
+                                <div className="p-6 bg-[#dedcff]/30 rounded-3xl border border-[#dedcff]">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <span className="text-sm font-black text-[#050315]">Grand Total</span>
+                                        <span className="text-2xl font-black text-[#2f27ce]">Rs. {finalTotal.toLocaleString()}</span>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-300 mb-1">Zip Code</label>
-                                        <input
-                                            type="text"
-                                            name="zipCode"
-                                            value={orderFormData.zipCode}
-                                            onChange={handleOrderFormChange}
-                                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                            placeholder="Zip code"
-                                        />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button type="button" onClick={() => setShowOrderForm(false)} className="px-4 py-3.5 bg-white text-[#050315] border-2 border-[#dedcff] font-bold rounded-xl hover:bg-[#fbfbfe] transition-all">Cancel</button>
+                                        <button type="submit" disabled={submittingOrder} className="px-4 py-3.5 bg-[#2f27ce] text-white font-black rounded-xl hover:bg-[#433bff] transition-all shadow-lg shadow-[#2f27ce]/20 disabled:opacity-50">
+                                            {submittingOrder ? 'Processing...' : 'Pay with PayPal'}
+                                        </button>
                                     </div>
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1">Address *</label>
-                                    <input
-                                        type="text"
-                                        name="address"
-                                        value={orderFormData.address}
-                                        onChange={handleOrderFormChange}
-                                        required
-                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                        placeholder="Street address"
-                                    />
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1">City</label>
-                                    <input
-                                        type="text"
-                                        name="city"
-                                        value={orderFormData.city}
-                                        onChange={handleOrderFormChange}
-                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                        placeholder="City"
-                                    />
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-1">Additional Notes</label>
-                                    <textarea
-                                        name="notes"
-                                        value={orderFormData.notes}
-                                        onChange={handleOrderFormChange}
-                                        rows="3"
-                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-amber-600"
-                                        placeholder="Special instructions or notes for your order..."
-                                    ></textarea>
-                                </div>
-                                </div>
-                                
-                                {/* Form Actions */}
-                                <div className="flex gap-3 pt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowOrderForm(false)}
-                                        className="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-md transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={submittingOrder}
-                                        className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {submittingOrder ? 'Submitting...' : 'Submit Order'}
-                                    </button>
                                 </div>
                             </form>
                         </div>

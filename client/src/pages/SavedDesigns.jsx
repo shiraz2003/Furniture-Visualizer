@@ -8,7 +8,7 @@ export default function SavedDesigns() {
   const navigate = useNavigate();
   
   // Get the setters from your context
-  const { setRoom, setItems } = useDesign();
+  const { setRoom, setItems, setDesignName } = useDesign();
 
   useEffect(() => {
     api
@@ -18,9 +18,17 @@ export default function SavedDesigns() {
   }, []);
 
   const loadDesign = (design) => {
+    const normalizedItems = Array.isArray(design.items)
+      ? design.items.map((item, index) => ({
+          ...item,
+          id: item?.id || `${design._id}-item-${index}`,
+        }))
+      : [];
+
     // 1. Overwrite current workspace with the saved room and items
     setRoom(design.room);
-    setItems(design.items);
+    setItems(normalizedItems);
+    setDesignName(design.name || "My Design");
     
     // 2. Redirect back to the 3D Viewer to see the loaded design!
     navigate("/viewer-3d");

@@ -1,6 +1,11 @@
 import Order from '../models/order.js';
 import jwt from 'jsonwebtoken';
 
+const PAYPAL_BASE_URL = process.env.PAYPAL_BASE_URL || 'https://api-m.sandbox.paypal.com';
+const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
+const LKR_TO_USD_RATE = Number(process.env.LKR_TO_USD_RATE) || 320;
+
 // Helper function to extract user ID from token
 const getUserIdFromToken = (authHeader) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,6 +19,204 @@ const getUserIdFromToken = (authHeader) => {
     } catch (error) {
         console.error('Token verification failed:', error);
         return null;
+    }
+};
+
+const getPayPalAccessToken = async () => {
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
+        throw new Error('PayPal credentials are missing on server');
+    }
+
+    const basicAuth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+
+    const response = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Basic ${basicAuth}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: 'grant_type=client_credentials'
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get PayPal access token: ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.access_token;
+};
+
+// Create PayPal order and return approval URL
+export const createPayPalOrder = async (req, res) => {
+    try {
+        const { total, currency = 'USD', returnUrl, cancelUrl } = req.body;
+
+        if (!total || Number(total) <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Valid total amount is required'
+            });
+        }
+
+        if (!returnUrl || !cancelUrl) {
+            return res.status(400).json({
+                success: false,
+                message: 'returnUrl and cancelUrl are required'
+            });
+        }
+
+        const accessToken = await getPayPalAccessToken();
+        const normalizedCurrency = String(currency || 'USD').toUpperCase();
+        const requestedTotal = Number(total);
+
+        let paypalCurrency = 'USD';
+        let payableTotal = requestedTotal;
+
+        if (normalizedCurrency === 'LKR') {
+            payableTotal = requestedTotal / LKR_TO_USD_RATE;
+        } else if (normalizedCurrency !== 'USD') {
+            return res.status(400).json({
+                success: false,
+                message: 'Unsupported currency. Use LKR or USD.'
+            });
+        }
+
+        if (!Number.isFinite(payableTotal) || payableTotal <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Converted PayPal amount is invalid'
+            });
+        }
+
+        const amountValue = payableTotal.toFixed(2);
+
+        const response = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                intent: 'CAPTURE',
+                purchase_units: [
+                    {
+                        amount: {
+                            currency_code: paypalCurrency,
+                            value: amountValue
+                        }
+                    }
+                ],
+                application_context: {
+                    return_url: returnUrl,
+                    cancel_url: cancelUrl,
+                    user_action: 'PAY_NOW'
+                }
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to create PayPal order',
+                details: data
+            });
+        }
+
+        const approvalUrl = data?.links?.find((link) => link.rel === 'approve')?.href;
+
+        if (!approvalUrl) {
+            return res.status(500).json({
+                success: false,
+                message: 'PayPal approval URL was not returned',
+                details: data
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                orderId: data.id,
+                approvalUrl,
+                status: data.status,
+                requestedCurrency: normalizedCurrency,
+                requestedTotal,
+                payableCurrency: paypalCurrency,
+                payableTotal: Number(amountValue),
+                exchangeRate: normalizedCurrency === 'LKR' ? LKR_TO_USD_RATE : 1
+            }
+        });
+    } catch (error) {
+        console.error('Error creating PayPal order:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while creating PayPal order',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        });
+    }
+};
+
+// Capture approved PayPal order
+export const capturePayPalOrder = async (req, res) => {
+    try {
+        const { orderId } = req.body;
+
+        if (!orderId) {
+            return res.status(400).json({
+                success: false,
+                message: 'PayPal orderId is required'
+            });
+        }
+
+        const accessToken = await getPayPalAccessToken();
+        const response = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders/${orderId}/capture`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to capture PayPal order',
+                details: data
+            });
+        }
+
+        const capture = data?.purchase_units?.[0]?.payments?.captures?.[0];
+        const isCompleted = data?.status === 'COMPLETED' || capture?.status === 'COMPLETED';
+
+        if (!isCompleted) {
+            return res.status(400).json({
+                success: false,
+                message: 'PayPal payment is not completed',
+                details: data
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'PayPal payment captured successfully',
+            data: {
+                orderId: data.id,
+                status: data.status,
+                captureId: capture?.id,
+                amount: capture?.amount
+            }
+        });
+    } catch (error) {
+        console.error('Error capturing PayPal order:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while capturing PayPal order',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        });
     }
 };
 
@@ -90,7 +293,7 @@ export const createOrder = async (req, res) => {
             items,
             pricing,
             notes: notes || '',
-            status: 'pending',
+            status: 'completed',
             orderDate: new Date()
         });
 

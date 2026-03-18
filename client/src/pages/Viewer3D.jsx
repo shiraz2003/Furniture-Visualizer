@@ -8,11 +8,33 @@ import { useDesign } from "../context/DesignContext";
 import { getModelById } from "../utils/modelRegistry";
 import api from "../services/api";
 
+
 const FALLBACK_IMAGE =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%25' height='100%25' fill='%23f3f4f6'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='Arial' font-size='20'>Furniture</text></svg>";
 
+const DEFAULT_MODEL_SIZE = { w: 1.2, d: 1.2, h: 1.0 };
+
+const resolveModelData = (designItem) => {
+  if (designItem?.customModel?.modelPath) {
+    const custom = designItem.customModel;
+    return {
+      id: custom.id || `custom-${designItem.id}`,
+      name: custom.name || "Furniture",
+      category: custom.category || "furniture",
+      modelPath: custom.modelPath,
+      size: custom.size || DEFAULT_MODEL_SIZE,
+      defaultRotationY: custom.defaultRotationY || 0,
+      price: Number(custom.price) || 0,
+      image: custom.image || FALLBACK_IMAGE,
+    };
+  }
+
+  return getModelById(designItem?.modelId);
+};
+
 export default function Viewer3D() {
   const mountRef = useRef(null);
+  const missingModelWarnedRef = useRef(new Set());
   const navigate = useNavigate();
   const { room, items, designName, setDesignName, updateItem } = useDesign();
 
@@ -27,12 +49,14 @@ export default function Viewer3D() {
       let addedCount = 0;
 
       items.forEach((placedItem) => {
-        const model = getModelById(placedItem.modelId);
+        const model = resolveModelData(placedItem);
         if (!model) {
           return;
         }
 
-        const cartId = `model-${model.id}`;
+        const cartId = placedItem.sourceFurnitureId
+          ? `furniture-${placedItem.sourceFurnitureId}`
+          : `model-${model.id}`;
         const existingIndex = cart.findIndex((cartItem) => cartItem._id === cartId);
 
         if (existingIndex > -1) {
@@ -54,6 +78,7 @@ export default function Viewer3D() {
       localStorage.setItem("furnitureCart", JSON.stringify(cart));
       window.dispatchEvent(new Event("cartUpdated"));
       toast.success(`Added ${addedCount} item(s) to cart`);
+      navigate("/cart");
     } catch (error) {
       console.error("Error adding design items to cart:", error);
       toast.error("Failed to add items to cart");
@@ -278,8 +303,57 @@ export default function Viewer3D() {
     // === LOAD FURNITURE ===
     const loader = new GLTFLoader();
 
+    const addFallbackProxy = (designItem, modelData) => {
+      const modelSize = modelData?.size || DEFAULT_MODEL_SIZE;
+      const fallbackColorByCategory = {
+        seating: 0x8b5cf6,
+        bedroom: 0x2563eb,
+        table: 0x16a34a,
+        decor: 0xf59e0b,
+        lighting: 0xeab308,
+        furniture: 0x64748b,
+      };
+
+      const colorKey = String(modelData?.category || "furniture").toLowerCase();
+      const proxyMaterial = new THREE.MeshStandardMaterial({
+        color: fallbackColorByCategory[colorKey] || fallbackColorByCategory.furniture,
+        roughness: 0.6,
+        metalness: 0.1,
+      });
+
+      const proxyMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(modelSize.w, modelSize.h, modelSize.d),
+        proxyMaterial
+      );
+      proxyMesh.castShadow = true;
+      proxyMesh.receiveShadow = true;
+
+      const group = new THREE.Group();
+      group.add(proxyMesh);
+
+      const yPos =
+        String(modelData?.category || "").toLowerCase() === "lighting"
+          ? room.height - modelSize.h / 2
+          : modelSize.h / 2;
+
+      group.position.set(designItem.x, yPos, designItem.z);
+      group.rotation.y =
+        THREE.MathUtils.degToRad(designItem.rotation) + (modelData?.defaultRotationY || 0);
+
+      group.userData.__designItemId = designItem.id;
+      group.userData.__halfExtentsXZ = {
+        x: modelSize.w / 2,
+        z: modelSize.d / 2,
+      };
+
+      const clamped = group.position.clone();
+      clampToRoomWithExtents(group, clamped);
+      group.position.copy(clamped);
+      scene.add(group);
+    };
+
     items.forEach((item) => {
-      const modelData = getModelById(item.modelId);
+      const modelData = resolveModelData(item);
       if (!modelData) return;
 
       loader.load(
@@ -293,9 +367,10 @@ export default function Viewer3D() {
           rawBox.getSize(rawSize);
           rawBox.getCenter(rawCenter);
 
-          const desiredW = modelData.size.w;
-          const desiredH = modelData.size.h;
-          const desiredD = modelData.size.d;
+          const modelSize = modelData.size || DEFAULT_MODEL_SIZE;
+          const desiredW = modelSize.w;
+          const desiredH = modelSize.h;
+          const desiredD = modelSize.d;
 
           const scaleForW = desiredW / rawSize.x;
           const scaleForH = desiredH / rawSize.y;
@@ -319,7 +394,7 @@ export default function Viewer3D() {
           group.position.set(item.x, yPos, item.z);
 
           group.rotation.y =
-            THREE.MathUtils.degToRad(item.rotation) + modelData.defaultRotationY;
+            THREE.MathUtils.degToRad(item.rotation) + (modelData.defaultRotationY || 0);
 
           group.traverse((child) => {
             if (child.isMesh) {
@@ -350,6 +425,13 @@ export default function Viewer3D() {
         undefined,
         (error) => {
           console.error(`Error loading ${modelData.name}:`, error);
+
+          if (!missingModelWarnedRef.current.has(modelData.modelPath)) {
+            missingModelWarnedRef.current.add(modelData.modelPath);
+            toast.error(`3D file missing for ${modelData.name}. Showing preview shape.`);
+          }
+
+          addFallbackProxy(item, modelData);
         }
       );
     });
@@ -472,6 +554,7 @@ export default function Viewer3D() {
       {/* Add To Cart Button */}
       <button
         onClick={handleAddToCart}
+        
         style={{
           position: "absolute",
           bottom: 25,
@@ -488,6 +571,7 @@ export default function Viewer3D() {
         }}
       >
         Add To Cart
+        
       </button>
 
       {/* Info panel */}
@@ -539,7 +623,7 @@ export default function Viewer3D() {
           </div>
         )}
         {items.map((item, idx) => {
-          const model = getModelById(item.modelId);
+          const model = resolveModelData(item);
           return (
             <div key={idx} style={{ marginTop: 4 }}>
               {model?.name}: x={item.x.toFixed(2)}m, z={item.z.toFixed(2)}m,

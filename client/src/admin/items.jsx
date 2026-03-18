@@ -169,7 +169,7 @@ const Items = () => {
       toast.success("Item removed successfully!");
       fetchItems();
       setShowDeleteModal(false);
-    } catch (error) {
+    } catch {
       toast.error("Error deleting item");
     } finally {
       setLoading(false);
@@ -200,7 +200,6 @@ const Items = () => {
         </div>
       </div>
 
-      {/* --- Mobile FAB (Floating Action Button) --- */}
       <button 
         onClick={() => { resetForm(); setShowAddModal(true); }}
         className="md:hidden fixed bottom-24 right-6 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform border-2 border-white"
@@ -208,7 +207,6 @@ const Items = () => {
         <HiPlus size={28} />
       </button>
 
-      {/* --- Desktop View (Table) --- */}
       <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50/50 border-b border-slate-200">
@@ -246,7 +244,6 @@ const Items = () => {
         </table>
       </div>
 
-      {/* --- Mobile View (Cards) --- */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
         {filteredItems.map(item => (
           <div key={item._id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
@@ -274,7 +271,6 @@ const Items = () => {
         ))}
       </div>
 
-      {/* Add / Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}></div>
@@ -328,8 +324,8 @@ const Items = () => {
                       <option value="Chair">Chair</option>
                       <option value="Desk">Desk</option>
                       <option value="Cupboard">Cupboard</option>
-                      <option value="Table">Table</option>
                       <option value="Bed">Bed</option>
+                      <option value="Table">Table</option>
                     </select>
                   </div>
                 </div>
@@ -346,7 +342,6 @@ const Items = () => {
         </div>
       )}
 
-      {/* Confirm Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-110 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)}></div>
@@ -363,7 +358,6 @@ const Items = () => {
         </div>
       )}
 
-      {/* Delete Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-110 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)}></div>

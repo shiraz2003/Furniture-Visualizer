@@ -1,193 +1,128 @@
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
-import toast from "react-hot-toast";
+import { useState, useMemo } from "react"; // useEffect දැන් ඕනේ නැහැ
+import { IoArrowForward, IoEyeOutline } from "react-icons/io5";
 
-const FALLBACK_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%25' height='100%25' fill='%23f3f4f6'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='Arial' font-size='20'>No Image</text></svg>";
+const FALLBACK_IMAGE =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%25' height='100%25' fill='%23dedcff'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23050315' fill-opacity='0.4' font-family='Arial' font-weight='bold' font-size='16'>No Image</text></svg>";
 
-// Helper function to extract final image from array or string
 const getFinalImage = (imageData) => {
   if (!imageData) return null;
-  
-  // If it's already an array, get the last element
+
   if (Array.isArray(imageData)) {
     return imageData.length > 0 ? imageData[imageData.length - 1] : null;
   }
-  
-  // If it's a string, try to parse as JSON array first
-  if (typeof imageData === 'string') {
+
+  if (typeof imageData === "string") {
     try {
       const parsed = JSON.parse(imageData);
       if (Array.isArray(parsed)) {
         return parsed.length > 0 ? parsed[parsed.length - 1] : null;
       }
-    } catch (e) {
-      // Not JSON, treat as single image URL
+    } catch {
       return imageData;
     }
     return imageData;
   }
-  
+
   return null;
 };
 
 export default function FurnitureCard(props) {
-  // Handle different prop naming patterns and provide fallback
   const furniture = props.furniture || props.item || {};
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
-
-  // Memoize the final image extraction to prevent recalculation on every render
+  
   const displayImage = useMemo(() => {
-    const finalImg = getFinalImage(furniture?.image);
-    console.log('Final image extracted:', finalImg, 'from:', furniture?.image);
-    return finalImg;
+    return getFinalImage(furniture?.image);
   }, [furniture?.image]);
 
-  // Early return if no furniture data
+  // useEffect ඇතුළේ setState කරනවා වෙනුවට, කෙලින්ම initial value එක මෙහෙම දෙන්න
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(!!displayImage); 
+
   if (!furniture || Object.keys(furniture).length === 0) {
     return (
-      <div className="w-full max-w-full sm:max-w-100 h-auto min-h-90 sm:min-h-112.5 rounded-xl shadow-lg border border-gray-200 p-3 sm:p-4 flex items-center justify-center bg-white">
-        <div className="text-center text-gray-500">
-          <p>No furniture data available</p>
+      <div className="rounded-2xl border border-[#dedcff] bg-white p-6 shadow-sm">
+        <div className="flex min-h-[250px] items-center justify-center text-center font-bold text-[#050315]/40 text-sm uppercase tracking-widest">
+          No furniture data
         </div>
       </div>
     );
   }
 
-  // Check authentication status
-  useEffect(() => {
-    const checkAuthStatus = () => {
-      const token = localStorage.getItem('token');
-      setIsLoggedIn(!!token);
-    };
-
-    // Initial check
-    checkAuthStatus();
-
-    // Listen for storage changes (login/logout from other tabs)
-    const handleStorageChange = (e) => {
-      if (e.key === 'token') {
-        checkAuthStatus();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    // Periodic check for changes in the same tab
-    const interval = setInterval(checkAuthStatus, 1000);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
-
-  // Debug image URL
-  useEffect(() => {
-    if (displayImage) {
-      console.log('Display image for rendering:', displayImage);
-    }
-  }, [displayImage]);
-
-  useEffect(() => {
-    setImageError(false);
-    setImageLoading(true);
-
-    // Set a timeout to hide loader if image doesn't load
-    const loadTimeout = setTimeout(() => {
-      setImageLoading(false);
-    }, 5000); // 5 second timeout
-
-    return () => clearTimeout(loadTimeout);
-  }, [displayImage]);
-
-  const addToCart = (item) => {
-    try {
-      let cart = JSON.parse(localStorage.getItem('furnitureCart')) || [];
-      
-      // Check if item already exists
-      const existingItemIndex = cart.findIndex(cartItem => cartItem._id === item._id);
-      
-      if (existingItemIndex > -1) {
-        cart[existingItemIndex].quantity += 1;
-        toast.success('Quantity updated in cart!');
-      } else {
-        cart.push({ ...item, quantity: 1 });
-        toast.success('Furniture added to cart!');
-      }
-      
-      localStorage.setItem('furnitureCart', JSON.stringify(cart));
-      return { success: true };
-    } catch (error) {
-      return { success: false, message: 'Failed to add to cart' };
-    }
-  };
-
   return (
-    <div className="w-full max-w-full sm:max-w-100 h-auto min-h-90 sm:min-h-112.5 rounded-xl shadow-lg border border-gray-200 p-3 sm:p-4 flex flex-col bg-white hover:shadow-xl hover:scale-102 transition-all duration-300 overflow-hidden gap-2">
-      <div className="relative w-full h-44 sm:h-56 lg:h-64 mb-2 sm:mb-3">
+    <div className="group overflow-hidden rounded-[1.5rem] border border-[#dedcff]/60 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#2f27ce]/5 hover:border-[#2f27ce]/30 flex flex-col h-full">
+      
+      {/* Image Section */}
+      <div className="relative h-[200px] overflow-hidden bg-[#fbfbfe] sm:h-[220px]">
         {imageLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg z-10">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-300"></div>
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#fbfbfe]">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#dedcff] border-t-[#2f27ce]"></div>
           </div>
         )}
+
         <img
-          key={displayImage || 'fallback'}
+          key={displayImage || "fallback"} // Image එක මාරු වන විට state එක reset වීමට මෙය උදව් වේ
           src={imageError || !displayImage ? FALLBACK_IMAGE : displayImage}
-          className={`w-full h-full object-cover rounded-lg cursor-pointer transition-opacity duration-300 ${imageLoading && displayImage && !imageError ? 'opacity-0' : 'opacity-100'}`}
-          onLoad={() => {
-            console.log('Image loaded successfully:', displayImage);
-            setImageLoading(false);
-            setImageError(false);
-          }}
+          alt={furniture?.name || "Furniture item"}
+          className={`h-full w-full object-cover transition-all duration-700 group-hover:scale-110 ${
+            imageLoading ? "opacity-0" : "opacity-100"
+          }`}
+          onLoad={() => setImageLoading(false)}
           onError={() => {
-            console.error('Image failed to load, using fallback:', displayImage);
             setImageError(true);
             setImageLoading(false);
           }}
-          alt={furniture?.name || "Furniture item"}
         />
+
+        <div className="absolute left-3 top-3 rounded-lg bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[#2f27ce] shadow-sm backdrop-blur-md border border-[#dedcff]/50">
+          {furniture?.category || "Furniture"}
+        </div>
       </div>
-      <div className="flex-1 flex flex-col justify-between">
-        <h2 className="text-base sm:text-xl font-bold mb-1 sm:mb-2 text-gray-900 line-clamp-2">
-          {furniture?.name || "Unnamed Furniture"}
-        </h2>
-        
-        <div className="space-y-1 sm:space-y-2 mb-2 sm:mb-3">
-          <p className="text-gray-700 text-sm sm:text-base">
-            <span className="font-medium">Category:</span> {furniture?.category || "Unknown"}
+
+      {/* Content Section */}
+      <div className="p-5 flex flex-col flex-1">
+        <div className="mb-3">
+          <h3 className="line-clamp-2 text-lg font-black leading-tight text-[#050315] group-hover:text-[#2f27ce] transition-colors duration-300">
+            {furniture?.name || "Unnamed Furniture"}
+          </h3>
+        </div>
+
+        <div className="mb-6 space-y-1.5 text-[11px] font-bold uppercase tracking-wide text-[#050315]/40 flex-1">
+          <p className="flex items-center gap-2">
+            <span className="h-1 w-1 rounded-full bg-[#2f27ce]"></span>
+            {furniture?.category || "General"}
           </p>
-         
           {furniture?.dimensions && (
-            <p className="text-gray-700 text-sm sm:text-base">
-              <span className="font-medium">Dimensions:</span> {furniture.dimensions}
+            <p className="flex items-center gap-2 truncate">
+              <span className="h-1 w-1 rounded-full bg-[#dedcff]"></span>
+              {furniture.dimensions}
             </p>
           )}
         </div>
-        
-        <div className="mt-auto">
-          <p className="text-lg sm:text-xl font-bold text-green-600 mb-2 sm:mb-3">
-            <span className="text-sm font-medium text-gray-500 pr-2">Price:</span>
-            Rs.{furniture?.price ? furniture.price.toFixed(2) : "0.00"}
-          </p>
-          
-          <div className="space-y-2">
-            <button
-              className="w-full font-medium py-2 px-4 rounded-lg transition-colors duration-200 border border-slate-300 text-slate-700 hover:bg-slate-100"
-              onClick={() => navigate(`/furniture/${furniture._id}`)}
-            >
-              View Details
-            </button>
 
-            
-            
-            
-            
-            
-        
-          </div>
+        <div className="mt-auto pt-4 border-t border-[#dedcff]/40">
+            <div className="mb-4 flex items-end justify-between">
+              <div>
+                <p className="mb-0.5 text-[9px] font-black uppercase tracking-[0.2em] text-[#050315]/30">
+                  Price
+                </p>
+                <p className="text-xl font-black text-[#050315]">
+                  Rs. {furniture?.price ? Number(furniture.price).toLocaleString() : "0.00"}
+                </p>
+              </div>
+              <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">
+                Available
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate(`/furniture/${furniture._id}`)}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#2f27ce] px-4 py-3 text-xs font-black uppercase tracking-widest text-white transition-all duration-300 hover:bg-[#433bff] hover:shadow-lg hover:shadow-[#2f27ce]/20 active:scale-95 group/btn"
+            >
+              <IoEyeOutline size={16} className="transition-transform group-hover/btn:scale-110" />
+              View Item
+              <IoArrowForward size={14} className="transition-all duration-300 group-hover/btn:translate-x-1" />
+            </button>
         </div>
       </div>
     </div>

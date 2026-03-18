@@ -1,6 +1,8 @@
 import express from 'express';
 import {
     createOrder,
+    createPayPalOrder,
+    capturePayPalOrder,
     getAllOrders,
     getOrderById,
     updateOrderStatus,
@@ -13,6 +15,8 @@ const router = express.Router();
 
 // Public routes (for customers)
 router.post('/orders', createOrder);                                    // POST /api/admin/orders - Create new order
+router.post('/orders/paypal/create', createPayPalOrder);                // POST /api/admin/orders/paypal/create - Create PayPal order
+router.post('/orders/paypal/capture', capturePayPalOrder);              // POST /api/admin/orders/paypal/capture - Capture PayPal order
 router.get('/orders/customer/:email', getOrdersByCustomer);             // GET /api/admin/orders/customer/:email - Get orders by customer email
 
 // Admin routes (should be protected with auth middleware in production)
