@@ -59,6 +59,7 @@ const AdminLayout = () => {
     { name: 'Dashboard', path: '/admin', icon: <HiOutlineHome size={22}/> },
     { name: 'Users', path: '/admin/users', icon: <HiOutlineUsers size={22}/> },
     { name: 'Items', path: '/admin/items', icon: <HiOutlineCube size={22}/> },
+    { name: 'Orders', path: '/admin/orders', icon: <HiOutlineClipboardList size={22}/> },
     { name: 'Reviews', path: '/admin/reviews', icon: <HiOutlineStar size={22}/> }
   ];
 

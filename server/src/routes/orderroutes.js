@@ -8,7 +8,8 @@ import {
     updateOrderStatus,
     getOrdersByCustomer,
     deleteOrder,
-    getOrderStatistics
+    getOrderStatistics,
+    getAdminCompletedOrders
 } from '../controllers/ordercontroller.js';
 
 const router = express.Router();
@@ -24,6 +25,7 @@ router.get('/orders', getAllOrders);                                    // GET /
 router.get('/orders/statistics', getOrderStatistics);                   // GET /api/admin/orders/statistics - Get order statistics
 router.get('/orders/:orderId', getOrderById);                          // GET /api/admin/orders/:orderId - Get order by ID
 router.put('/orders/:orderId/status', updateOrderStatus);              // PUT /api/admin/orders/:orderId/status - Update order status
-router.delete('/orders/:orderId', deleteOrder);                        // DELETE /api/admin/orders/:orderId - Delete order
+router.delete('/orders/:orderId', deleteOrder);  
+router.get('/admin-completed', getAdminCompletedOrders);                      // DELETE /api/admin/orders/:orderId - Delete order
 
 export default router;

@@ -12,6 +12,7 @@ import AdminLayout from './admin/adminlayout.jsx';
 import AdminDashboard from './admin/dashboard.jsx';
 import Users from './admin/users';
 import Items from './admin/items.jsx';
+import Orders from './admin/orders.jsx';
 import AdminReviews from './admin/reviews.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
@@ -39,7 +40,7 @@ function App() {
             <Route path="users" element={<Users />} />
             <Route path="items" element={<Items />} />
             <Route path="reviews" element={<AdminReviews />} />
-
+            <Route path="orders" element={<Orders />} />
           </Route>
 
           {/* User Section */}

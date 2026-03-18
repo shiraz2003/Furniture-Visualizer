@@ -622,3 +622,23 @@ export const getOrderStatistics = async (req, res) => {
         });
     }
 };
+
+// අලුතින් එක් කළ Function එක: Completed Orders පමණක් ලබා ගැනීම සඳහා
+export const getAdminCompletedOrders = async (req, res) => {
+    try {
+        // status එක 'completed' වන orders පමණක් Database එකෙන් ලබා ගනී
+        const completedOrders = await Order.find({ status: 'completed' }).sort({ createdAt: -1 });
+        
+        res.status(200).json({
+            success: true,
+            count: completedOrders.length,
+            data: completedOrders
+        });
+    } catch (error) {
+        console.error('Error fetching completed orders for admin:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server Error while fetching completed orders' 
+        });
+    }
+};
