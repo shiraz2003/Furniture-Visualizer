@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 
 // CORS middleware - allow requests from frontend
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'https://furniture-visualizer-h3ud.vercel.app'],
     credentials: true
 }));
 
