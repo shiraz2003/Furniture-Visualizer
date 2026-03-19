@@ -7,6 +7,9 @@ import { fileURLToPath } from 'url'; // ES Modules සඳහා එක් කළ
 import userRouter from './routes/auth.js';
 import adminRoutes from './routes/admin/userroutes.js';
 import furnitureRoutes from './routes/admin/furnitureroutes.js'; // අලුතින් එක් කළ Furniture Routes
+import orderRoutes from './routes/orderroutes.js'; // Order Routes එක් කළා
+import designRoutes from './routes/designRoutes.js'; // <-- Add this import
+import reviewRoutes from './routes/reviews.js'; // Review Routes එක් කළා
 
 const app = express();
 
@@ -16,7 +19,7 @@ const __dirname = path.dirname(__filename);
 
 // CORS middleware - allow requests from frontend
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'https://furniture-visualizer-h3ud.vercel.app'],
     credentials: true
 }));
 
@@ -29,9 +32,11 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes සම්බන්ධ කිරීම
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin', orderRoutes); // Order Routes එක් කළා
 app.use('/api/auth', userRouter);
 app.use('/api/furniture', furnitureRoutes); // අලුත් Furniture API එක මෙතැනින් වැඩ කරයි
-
+app.use('/api/designs', designRoutes); // <-- Mount the new design routes here
+app.use('/api/reviews', reviewRoutes); // Review Routes එක් කළා
 
 const connectionString = process.env.MONGO_URI;
 mongoose.connect(connectionString)

@@ -1,140 +1,129 @@
-
-import { Link, useNavigate } from "react-router-dom";
-import { BiCart } from "react-icons/bi";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { HiMenu, HiX, HiHome, HiShoppingBag, HiInformationCircle, HiMail } from "react-icons/hi";
-import { IoLogOut } from "react-icons/io5";
+import {
+  IoLogOutOutline,
+  IoPersonOutline,
+  IoBagHandleOutline,
+  IoMenuOutline,
+  IoCloseOutline
+} from "react-icons/io5";
 import toast from "react-hot-toast";
 
 export default function Header() {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem("token"));
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-    useEffect(() => {
-        // Check if user is logged in
-        const token = localStorage.getItem("token");
-        setIsLoggedIn(!!token);
-    }, []);
+  const isHomePage = location.pathname === "/dashboard" || location.pathname === "/";
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        setIsLoggedIn(false);
-        toast.success("Logged out successfully");
-        navigate("/login");
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "auto";
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      document.body.style.overflow = "auto";
     };
+  }, [isMobileMenuOpen]);
 
-    return (
-       <header className="w-full h-auto sm:h-[100px] md:h-[120px] lg:h-[60px] bg-amber-800 text-secondary shadow-md relative z-50 lg:p-8">
-           <div className="w-full h-full flex items-center justify-between px-4 sm:px-6 md:px-8 lg:px-10 py-4 sm:py-0">
-               {/* Mobile Menu Button - Left */}
-               <div className="flex items-center lg:hidden">
-                   <button 
-                       onClick={() => setIsMenuOpen(!isMenuOpen)}
-                       className="text-secondary hover:text-white transition-colors"
-                   >
-                       {isMenuOpen ? <HiX className="text-3xl" /> : <HiMenu className="text-3xl" />}
-                   </button>
-               </div>
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsLoggedIn(false);
+    toast.success("Logged out successfully");
+    setIsMobileMenuOpen(false);
+    navigate("/login");
+  };
 
-               {/* Logo - Centered on mobile, left on desktop */}
-               <Link to="/dashboard" className="absolute left-1/2 -translate-x-1/2 lg:static lg:transform-none flex items-center gap-2 hover:opacity-80 transition-opacity">
-                   <img src="/logo.png" alt="Logo" className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12" />
-               </Link>
+  const navLinks = [
+    { name: "Home", path: "/dashboard" },
+    { name: "Furniture", path: "/furniture" },
+    { name: "Design", path: "/room-setup" },
+    { name: "Reviews", path: "/reviews" },
+    { name: "Profile", path: "/profile" },
+  ];
 
-               {/* Desktop Navigation */}
-               <nav className="hidden lg:flex items-center gap-4 xl:gap-6">
-                   <Link to="/dashboard" className="text-base xl:text-xl font-semibold hover:text-white hover:scale-110 transition-transform duration-200">
-                       Dashboard
-                   </Link>
-                   <Link to="/room-setup" className="text-base xl:text-xl font-semibold hover:text-white hover:scale-110 transition-transform duration-200">
-                       Room Setup
-                   </Link>
-                   <Link to="/editor-2d" className="text-base xl:text-xl font-semibold hover:text-white hover:scale-110 transition-transform duration-200">
-                       Editor 2D
-                   </Link>
-                   <Link to="/viewer-3d" className="text-base xl:text-xl font-semibold hover:text-white hover:scale-110 transition-transform duration-200">
-                       Viewer 3D
-                   </Link>
-               </nav>
+  const isDarkText = isScrolled || isMobileMenuOpen || !isHomePage;
+  const textColorClass = isDarkText ? "text-[#050315]" : "text-white";
+  const bgClass = isScrolled || !isHomePage ? "bg-[#fbfbfe] shadow-lg shadow-[#050315]/5" : "bg-transparent";
 
-               {/* Right Side - Cart and Auth */}
-               <div className="flex items-center gap-2 sm:gap-3 md:gap-4 ml-auto lg:ml-0">
-                   <Link to="/cart" className="hover:text-white hover:scale-110 transition-transform duration-200">
-                       <BiCart className="text-2xl sm:text-3xl" />
-                   </Link>
-                   {isLoggedIn ? (
-                       <button
-                           onClick={handleLogout}
-                           className="flex items-center gap-2 text-sm sm:text-base md:text-lg xl:text-xl font-semibold hover:text-white hover:scale-110 transition-transform duration-200"
-                       >
-                           <IoLogOut className="text-xl sm:text-2xl" />
-                           <span className="hidden sm:inline">Logout</span>
-                       </button>
-                   ) : (
-                       <>
-                           <Link to="/login" className="text-sm sm:text-base md:text-lg xl:text-xl font-semibold hover:text-white hover:scale-110 transition-transform duration-200">
-                               Login
-                           </Link>
-                           <Link to="/register" className="text-sm sm:text-base md:text-lg xl:text-xl font-semibold hover:text-white hover:scale-110 transition-transform duration-200">
-                               Register
-                           </Link>
-                       </>
-                   )}
-               </div>
-           </div>
+  return (
+    <nav className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-300 ${bgClass}`}>
+      <div className="max-w-[1440px] mx-auto h-[80px] flex items-center justify-between px-6 lg:px-[80px]">
+        
+        {/* Logo */}
+        <Link to="/dashboard" className="flex items-center group z-[110]">
+          <span className={`text-2xl font-black tracking-tighter transition-colors duration-300 ${textColorClass}`}>
+            Design<span className="text-[#2f27ce]">Lab.</span>
+          </span>
+        </Link>
 
-           {/* Mobile Menu */}
-           {isMenuOpen && (
-               <nav className="lg:hidden bg-amber-800 border-t border-secondary/20 py-4 absolute w-full z-40 shadow-lg">
-                   <div className="flex flex-col gap-3 px-6">
-                       <Link 
-                           to="/dashboard" 
-                           className="text-lg font-semibold hover:text-white transition-colors py-2 flex items-center gap-3"
-                           onClick={() => setIsMenuOpen(false)}
-                       >
-                           <HiHome className="text-2xl" />
-                           Dashboard
-                       </Link>
-                       <Link 
-                           to="/room-setup" 
-                           className="text-lg font-semibold hover:text-white transition-colors py-2 flex items-center gap-3"
-                           onClick={() => setIsMenuOpen(false)}
-                       >
-                           <HiShoppingBag className="text-2xl" />
-                           Room Setup
-                       </Link>
-                       <Link 
-                           to="/editor-2d" 
-                           className="text-lg font-semibold hover:text-white transition-colors py-2 flex items-center gap-3"
-                           onClick={() => setIsMenuOpen(false)}
-                       >
-                           <HiInformationCircle className="text-2xl" />
-                           Editor 2D
-                       </Link>
-                       <Link 
-                           to="/viewer-3d" 
-                           className="text-lg font-semibold hover:text-white transition-colors py-2 flex items-center gap-3"
-                           onClick={() => setIsMenuOpen(false)}
-                       >
-                           <HiMail className="text-2xl" />
-                           Viewer 3D
-                       </Link>
-                       {isLoggedIn && (
-                           <button
-                               onClick={() => {
-                                   handleLogout();
-                                   setIsMenuOpen(false);
-                               }}
-                               className="text-lg font-semibold hover:text-white transition-colors py-2 flex items-center gap-3 text-left border-t border-secondary/20 mt-2 pt-4"
-                           >
-                               <IoLogOut className="text-2xl" />
-                               Logout
-                           </button>
-                       )}
-                   </div>
-               </nav>
-           )}
-       </header>
-    );
+        {/* Desktop Nav */}
+        <div className="hidden lg:flex items-center gap-[40px]">
+          {navLinks.map((link) => (
+            <Link
+              key={link.name}
+              to={link.path}
+              className={`font-bold text-[14px] uppercase tracking-widest hover:text-[#2f27ce] transition-colors duration-300 ${textColorClass}`}
+            >
+              {link.name}
+            </Link>
+          ))}
+        </div>
+
+        {/* Right Icons */}
+        <div className={`flex items-center gap-5 z-[110] transition-colors duration-300 ${textColorClass}`}>
+           <Link to="/cart" className="hover:text-[#2f27ce] transition-all hover:scale-110 relative">
+            <IoBagHandleOutline size={24} />
+          </Link>
+          <div className="hidden lg:flex items-center gap-5">
+            {isLoggedIn ? (
+              <button onClick={handleLogout} className="hover:text-[#2f27ce] transition-all hover:scale-110">
+                <IoLogOutOutline size={24} />
+              </button>
+            ) : (
+              <Link to="/login" className="hover:text-[#2f27ce] transition-all hover:scale-110">
+                <IoPersonOutline size={22} />
+              </Link>
+            )}
+          </div>
+         
+
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden p-1 transition-colors hover:text-[#2f27ce]">
+            {isMobileMenuOpen ? <IoCloseOutline size={30} /> : <IoMenuOutline size={30} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      <div className={`lg:hidden fixed inset-0 w-full h-screen bg-[#fbfbfe] transition-all duration-500 ease-in-out z-[105] ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
+        <div className="flex flex-col h-full pt-[120px] px-10 pb-12">
+          <div className="flex flex-col gap-4">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                to={link.path}
+                className="text-[#050315] text-3xl font-black tracking-tighter hover:text-[#2f27ce] transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {link.name}
+              </Link>
+            ))}
+          </div>
+          <div className="mt-auto pt-8 border-t border-[#dedcff]">
+            {isLoggedIn ? (
+              <button onClick={handleLogout} className="flex items-center gap-4 text-[#050315] text-2xl font-black hover:text-[#2f27ce]">
+                <IoLogOutOutline size={32} className="text-[#2f27ce]" /> Logout
+              </button>
+            ) : (
+              <Link to="/login" className="flex items-center gap-4 text-[#050315] text-2xl font-black hover:text-[#2f27ce]" onClick={() => setIsMobileMenuOpen(false)}>
+                <IoPersonOutline size={32} className="text-[#2f27ce]" /> Account
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
 }

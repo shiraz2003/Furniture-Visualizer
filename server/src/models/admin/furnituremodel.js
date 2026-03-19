@@ -10,7 +10,7 @@ const furnitureSchema = new mongoose.Schema(
     },
     description: { type: String },
     price: { type: Number, required: true },
-    image: { type: String, required: true }, // Supabase Public URL
+    image: { type: [String], required: true, default: [] }, // Supabase Public URL
     model3DUrl: { type: String, required: true }, // Local Path (.glb)
   },
   { timestamps: true }

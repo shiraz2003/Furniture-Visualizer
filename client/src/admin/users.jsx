@@ -30,7 +30,7 @@ const Users = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/admin/users');
+      const response = await axios.get(import.meta.env.VITE_BACKEND_URL + '/api/admin/users');
       const formattedUsers = response.data.map(u => ({
         id: u._id,
         name: `${u.firstname} ${u.lastname}`,
@@ -61,7 +61,7 @@ const Users = () => {
   const handleAddUser = async () => {
     setLoading(true);
     try {
-      await axios.post('http://localhost:5000/api/admin/users', formData);
+      await axios.post(import.meta.env.VITE_BACKEND_URL + '/api/admin/users', formData);
       toast.success("User added successfully!");
       fetchUsers(); 
       setShowConfirmModal(false);
@@ -76,7 +76,7 @@ const Users = () => {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/admin/users/${userToDelete.id}`);
+      await axios.delete(import.meta.env.VITE_BACKEND_URL + `/api/admin/users/${userToDelete.id}`);
       toast.success("Account removed!");
       fetchUsers();
       setShowDeleteModal(false);
@@ -87,13 +87,10 @@ const Users = () => {
     }
   };
 
-  // සෙවුම් පදයට අනුව Filter කිරීම
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // ESLint error එක එන 'b' අයින් කර නිවැරදි කළ sorting logic එක
   const adminUsers = filteredUsers
     .filter(u => u.role === 'admin')
     .sort((a) => (a.name === currentUserName ? -1 : 1));
@@ -217,12 +214,12 @@ const Users = () => {
             />
           </div>
 
-          <button 
+          {/* <button 
             onClick={() => setShowAddModal(true)}
             className="hidden md:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg font-medium whitespace-nowrap"
           >
             <HiOutlineUserAdd size={20} /> Add New User
-          </button>
+          </button> */}
         </div>
       </div>
 

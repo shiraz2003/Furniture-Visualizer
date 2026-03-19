@@ -3,18 +3,107 @@ import { useNavigate } from "react-router-dom";
 import * as THREE from "three";
 import { GLTFLoader } from "three-stdlib";
 import { OrbitControls } from "three-stdlib";
+import toast from "react-hot-toast";
 import { useDesign } from "../context/DesignContext";
 import { getModelById } from "../utils/modelRegistry";
+import api from "../services/api";
+
+
+const FALLBACK_IMAGE =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%25' height='100%25' fill='%23f3f4f6'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='Arial' font-size='20'>Furniture</text></svg>";
+
+const DEFAULT_MODEL_SIZE = { w: 1.2, d: 1.2, h: 1.0 };
+
+const resolveModelData = (designItem) => {
+  if (designItem?.customModel?.modelPath) {
+    const custom = designItem.customModel;
+    return {
+      id: custom.id || `custom-${designItem.id}`,
+      name: custom.name || "Furniture",
+      category: custom.category || "furniture",
+      modelPath: custom.modelPath,
+      size: custom.size || DEFAULT_MODEL_SIZE,
+      defaultRotationY: custom.defaultRotationY || 0,
+      price: Number(custom.price) || 0,
+      image: custom.image || FALLBACK_IMAGE,
+    };
+  }
+
+  return getModelById(designItem?.modelId);
+};
 
 export default function Viewer3D() {
   const mountRef = useRef(null);
+  const missingModelWarnedRef = useRef(new Set());
   const navigate = useNavigate();
-  const { room, items } = useDesign();
+  const { room, items, designName, setDesignName, updateItem } = useDesign();
+
+  const handleAddToCart = () => {
+    if (!items.length) {
+      toast.error("No furniture in this design to add");
+      return;
+    }
+
+    try {
+      const cart = JSON.parse(localStorage.getItem("furnitureCart")) || [];
+      let addedCount = 0;
+
+      items.forEach((placedItem) => {
+        const model = resolveModelData(placedItem);
+        if (!model) {
+          return;
+        }
+
+        const cartId = placedItem.sourceFurnitureId
+          ? `furniture-${placedItem.sourceFurnitureId}`
+          : `model-${model.id}`;
+        const existingIndex = cart.findIndex((cartItem) => cartItem._id === cartId);
+
+        if (existingIndex > -1) {
+          cart[existingIndex].quantity += 1;
+        } else {
+          cart.push({
+            _id: cartId,
+            name: model.name,
+            category: model.category || "Furniture",
+            price: Number(model.price) || 0,
+            quantity: 1,
+            image: model.image || FALLBACK_IMAGE,
+          });
+        }
+
+        addedCount += 1;
+      });
+
+      localStorage.setItem("furnitureCart", JSON.stringify(cart));
+      window.dispatchEvent(new Event("cartUpdated"));
+      toast.success(`Added ${addedCount} item(s) to cart`);
+      navigate("/cart");
+    } catch (error) {
+      console.error("Error adding design items to cart:", error);
+      toast.error("Failed to add items to cart");
+    }
+  };
+
+  const saveDesign = async () => {
+    const designData = { name: designName?.trim() || "My Design", room, items };
+
+    try {
+      await api.post("/designs", designData);
+      alert("Design saved successfully!");
+    } catch (error) {
+      console.error("Error saving design:", error);
+      const message =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        "Failed to save design.";
+      alert(message);
+    }
+  };
 
   useEffect(() => {
     if (!mountRef.current) return;
 
-    // Clear existing
     while (mountRef.current.firstChild) {
       mountRef.current.removeChild(mountRef.current.firstChild);
     }
@@ -22,11 +111,9 @@ export default function Viewer3D() {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    // Scene
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a2e);
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
     camera.position.set(
       room.width / 2,
@@ -34,7 +121,6 @@ export default function Viewer3D() {
       room.length + room.length * 0.8
     );
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -42,7 +128,6 @@ export default function Viewer3D() {
     renderer.shadowMap.type = THREE.PCFShadowMap;
     mountRef.current.appendChild(renderer.domElement);
 
-    // === LIGHTS ===
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
@@ -57,7 +142,6 @@ export default function Viewer3D() {
     pointLight.position.set(room.width / 2, room.height - 0.3, room.length / 2);
     scene.add(pointLight);
 
-    // === ROOM ===
     // Floor
     const floorGeo = new THREE.PlaneGeometry(room.width, room.length);
     const floorMat = new THREE.MeshStandardMaterial({
@@ -68,6 +152,7 @@ export default function Viewer3D() {
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(room.width / 2, 0, room.length / 2);
     floor.receiveShadow = true;
+    floor.name = "__floor__";
     scene.add(floor);
 
     // Walls
@@ -77,7 +162,6 @@ export default function Viewer3D() {
       side: THREE.DoubleSide,
     });
 
-    // Back wall (z=0)
     const backWall = new THREE.Mesh(
       new THREE.BoxGeometry(room.width, room.height, 0.05),
       wallMat
@@ -86,7 +170,6 @@ export default function Viewer3D() {
     backWall.receiveShadow = true;
     scene.add(backWall);
 
-    // Left wall (x=0)
     const leftWall = new THREE.Mesh(
       new THREE.BoxGeometry(0.05, room.height, room.length),
       wallMat
@@ -95,7 +178,6 @@ export default function Viewer3D() {
     leftWall.receiveShadow = true;
     scene.add(leftWall);
 
-    // Right wall (x=room.width)
     const rightWall = new THREE.Mesh(
       new THREE.BoxGeometry(0.05, room.height, room.length),
       wallMat
@@ -104,89 +186,257 @@ export default function Viewer3D() {
     rightWall.receiveShadow = true;
     scene.add(rightWall);
 
-    // === CONTROLS ===
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(room.width / 2, room.height / 4, room.length / 2);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 1;
     controls.maxDistance = 30;
-    controls.maxPolarAngle = Math.PI * 0.85;
+    controls.maxPolarAngle = Math.PI / 2; // Restricted to stay above ground/eye-level
     controls.update();
+
+    // === MOVE / DRAG SUPPORT ===
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // y = 0
+    const planeHit = new THREE.Vector3();
+    const dragOffset = new THREE.Vector3();
+
+    let isDragging = false;
+    let draggedGroup = null;
+
+    const setMouseFromEvent = (e) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+    };
+
+    const findTaggedRoot = (obj) => {
+      let cur = obj;
+      while (cur) {
+        if (cur.userData && cur.userData.__designItemId) return cur;
+        cur = cur.parent;
+      }
+      return null;
+    };
+
+    // ✅ NEW: Clamp taking the model's footprint into account
+    // We store half-extents (x/z) on the group when it is loaded.
+    const clampToRoomWithExtents = (group, pos) => {
+      const ext = group?.userData?.__halfExtentsXZ || { x: 0, z: 0 };
+
+      // room min/max in world coords (your room is 0..width, 0..length)
+      const minX = 0 + ext.x;
+      const maxX = room.width - ext.x;
+      const minZ = 0 + ext.z;
+      const maxZ = room.length - ext.z;
+
+      // If an object is larger than the room in that axis, keep it centered
+      if (minX > maxX) pos.x = room.width / 2;
+      else pos.x = Math.max(minX, Math.min(maxX, pos.x));
+
+      if (minZ > maxZ) pos.z = room.length / 2;
+      else pos.z = Math.max(minZ, Math.min(maxZ, pos.z));
+    };
+
+    // ✅ NEW: Check for collisions with other furniture items
+    const isCollidingWithOthers = (movingGroup, proposedPos) => {
+      const ext1 = movingGroup.userData.__halfExtentsXZ;
+      if (!ext1) return false;
+
+      const box1 = {
+        minX: proposedPos.x - ext1.x,
+        maxX: proposedPos.x + ext1.x,
+        minZ: proposedPos.z - ext1.z,
+        maxZ: proposedPos.z + ext1.z,
+      };
+
+      for (const child of scene.children) {
+        if (child === movingGroup) continue;
+        if (!child.userData || !child.userData.__designItemId) continue;
+
+        const ext2 = child.userData.__halfExtentsXZ;
+        if (!ext2) continue;
+
+        const box2 = {
+          minX: child.position.x - ext2.x,
+          maxX: child.position.x + ext2.x,
+          minZ: child.position.z - ext2.z,
+          maxZ: child.position.z + ext2.z,
+        };
+
+        if (
+          box1.minX < box2.maxX &&
+          box1.maxX > box2.minX &&
+          box1.minZ < box2.maxZ &&
+          box1.maxZ > box2.minZ
+        ) {
+          return true; // Collision detected
+        }
+      }
+      return false;
+    };
+
+    const onPointerDown = (e) => {
+      if (e.button !== 0) return;
+      setMouseFromEvent(e);
+      raycaster.setFromCamera(mouse, camera);
+
+      const hits = raycaster.intersectObjects(scene.children, true);
+      if (!hits.length) return;
+
+      const hit = hits.find((h) => h.object && h.object.name !== "__floor__");
+      if (!hit) return;
+
+      const root = findTaggedRoot(hit.object);
+      if (!root) return;
+
+      isDragging = true;
+      draggedGroup = root;
+      controls.enabled = false;
+
+      raycaster.ray.intersectPlane(dragPlane, planeHit);
+      dragOffset.copy(draggedGroup.position).sub(planeHit);
+    };
+
+    const onPointerMove = (e) => {
+      if (!isDragging || !draggedGroup) return;
+
+      setMouseFromEvent(e);
+      raycaster.setFromCamera(mouse, camera);
+
+      if (raycaster.ray.intersectPlane(dragPlane, planeHit)) {
+        const next = planeHit.clone().add(dragOffset);
+
+        // preserve Y
+        next.y = draggedGroup.position.y;
+
+        // ✅ prevent crossing room boundaries
+        clampToRoomWithExtents(draggedGroup, next);
+
+        // ✅ prevent overlapping with other items
+        if (!isCollidingWithOthers(draggedGroup, next)) {
+          draggedGroup.position.copy(next);
+        }
+      }
+    };
+
+    const finishDrag = () => {
+      if (!isDragging || !draggedGroup) return;
+
+      const id = draggedGroup.userData.__designItemId;
+      const newX = Number(draggedGroup.position.x.toFixed(3));
+      const newZ = Number(draggedGroup.position.z.toFixed(3));
+
+      updateItem(id, { x: newX, z: newZ });
+
+      isDragging = false;
+      draggedGroup = null;
+      controls.enabled = true;
+    };
+
+    renderer.domElement.addEventListener("pointerdown", onPointerDown);
+    renderer.domElement.addEventListener("pointermove", onPointerMove);
+    renderer.domElement.addEventListener("pointerup", finishDrag);
+    renderer.domElement.addEventListener("pointercancel", finishDrag);
+    renderer.domElement.addEventListener("pointerleave", finishDrag);
 
     // === LOAD FURNITURE ===
     const loader = new GLTFLoader();
 
-    console.log("=== 3D VIEWER ===");
-    console.log(`Room: ${room.width}m x ${room.length}m x ${room.height}m`);
-    console.log(`Items to load: ${items.length}`);
+    const addFallbackProxy = (designItem, modelData) => {
+      const modelSize = modelData?.size || DEFAULT_MODEL_SIZE;
+      const fallbackColorByCategory = {
+        seating: 0x8b5cf6,
+        bedroom: 0x2563eb,
+        table: 0x16a34a,
+        decor: 0xf59e0b,
+        lighting: 0xeab308,
+        furniture: 0x64748b,
+      };
 
-    items.forEach((item, index) => {
-      const modelData = getModelById(item.modelId);
-      if (!modelData) {
-        console.warn(`[${index}] Model not found: ${item.modelId}`);
-        return;
-      }
+      const colorKey = String(modelData?.category || "furniture").toLowerCase();
+      const proxyMaterial = new THREE.MeshStandardMaterial({
+        color: fallbackColorByCategory[colorKey] || fallbackColorByCategory.furniture,
+        roughness: 0.6,
+        metalness: 0.1,
+      });
 
-      console.log(`[${index}] Loading ${modelData.name} | 2D pos: x=${item.x.toFixed(2)}, z=${item.z.toFixed(2)}`);
+      const proxyMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(modelSize.w, modelSize.h, modelSize.d),
+        proxyMaterial
+      );
+      proxyMesh.castShadow = true;
+      proxyMesh.receiveShadow = true;
+
+      const group = new THREE.Group();
+      group.add(proxyMesh);
+
+      const yPos =
+        String(modelData?.category || "").toLowerCase() === "lighting"
+          ? room.height - modelSize.h / 2
+          : modelSize.h / 2;
+
+      group.position.set(designItem.x, yPos, designItem.z);
+      group.rotation.y =
+        THREE.MathUtils.degToRad(designItem.rotation) + (modelData?.defaultRotationY || 0);
+
+      group.userData.__designItemId = designItem.id;
+      group.userData.__halfExtentsXZ = {
+        x: modelSize.w / 2,
+        z: modelSize.d / 2,
+      };
+
+      const clamped = group.position.clone();
+      clampToRoomWithExtents(group, clamped);
+      group.position.copy(clamped);
+      scene.add(group);
+    };
+
+    items.forEach((item) => {
+      const modelData = resolveModelData(item);
+      if (!modelData) return;
 
       loader.load(
         modelData.modelPath,
         (gltf) => {
           const model = gltf.scene;
 
-          // --- Step 1: Measure raw model ---
           const rawBox = new THREE.Box3().setFromObject(model);
           const rawSize = new THREE.Vector3();
           const rawCenter = new THREE.Vector3();
           rawBox.getSize(rawSize);
           rawBox.getCenter(rawCenter);
 
-          console.log(`  Raw size: w=${rawSize.x.toFixed(2)}, h=${rawSize.y.toFixed(2)}, d=${rawSize.z.toFixed(2)}`);
+          const modelSize = modelData.size || DEFAULT_MODEL_SIZE;
+          const desiredW = modelSize.w;
+          const desiredH = modelSize.h;
+          const desiredD = modelSize.d;
 
-          // --- Step 2: Calculate auto-scale to match desired size ---
-          const desiredW = modelData.size.w;
-          const desiredH = modelData.size.h;
-          const desiredD = modelData.size.d;
-
-          // Scale each axis to fit desired dimensions, use uniform (smallest) scale
           const scaleForW = desiredW / rawSize.x;
           const scaleForH = desiredH / rawSize.y;
           const scaleForD = desiredD / rawSize.z;
           const autoScale = Math.min(scaleForW, scaleForH, scaleForD);
 
-          // Apply item.scale on top (user scaling from editor)
           const finalScale = autoScale * item.scale;
 
-          // --- Step 3: Recenter model ---
-          // Move model so its bottom-center is at (0, 0, 0)
           model.position.set(-rawCenter.x, -rawBox.min.y, -rawCenter.z);
 
-          // --- Step 4: Wrap in group ---
           const group = new THREE.Group();
           group.add(model);
           group.scale.set(finalScale, finalScale, finalScale);
 
-          // --- Step 5: Position in room ---
-          // X and Z come directly from 2D editor (in meters)
-          // Y depends on category:
-          //   - lighting: hang from ceiling
-          //   - everything else: sit on floor (y=0)
           let yPos = 0;
           if (modelData.category === "lighting") {
-            // Hang from ceiling: room height minus scaled model height
             const scaledHeight = rawSize.y * finalScale;
             yPos = room.height - scaledHeight;
           }
 
           group.position.set(item.x, yPos, item.z);
 
-          // --- Step 6: Rotation ---
           group.rotation.y =
-            THREE.MathUtils.degToRad(item.rotation) +
-            modelData.defaultRotationY;
+            THREE.MathUtils.degToRad(item.rotation) + (modelData.defaultRotationY || 0);
 
-          // --- Step 7: Shadows ---
           group.traverse((child) => {
             if (child.isMesh) {
               child.castShadow = true;
@@ -194,27 +444,39 @@ export default function Viewer3D() {
             }
           });
 
-          scene.add(group);
+          group.userData.__designItemId = item.id;
 
-          // --- Debug ---
-          const scaledW = (rawSize.x * finalScale).toFixed(2);
-          const scaledH = (rawSize.y * finalScale).toFixed(2);
-          const scaledD = (rawSize.z * finalScale).toFixed(2);
-          console.log(
-            `  ✓ ${modelData.name} | ` +
-            `3D pos(${group.position.x.toFixed(2)}, ${group.position.y.toFixed(2)}, ${group.position.z.toFixed(2)}) | ` +
-            `autoScale=${autoScale.toFixed(4)} finalScale=${finalScale.toFixed(4)} | ` +
-            `scaled size(${scaledW}, ${scaledH}, ${scaledD})`
-          );
+          // ✅ NEW: compute footprint extents in world space for boundary clamping
+          // Use the group's bounding box (after scaling/centering) and store half-extents.
+          const groupBox = new THREE.Box3().setFromObject(group);
+          const groupSize = new THREE.Vector3();
+          groupBox.getSize(groupSize);
+          group.userData.__halfExtentsXZ = {
+            x: groupSize.x / 2,
+            z: groupSize.z / 2,
+          };
+
+          // Optional: if the loaded position is already out-of-bounds, clamp it once
+          const clamped = group.position.clone();
+          clampToRoomWithExtents(group, clamped);
+          group.position.copy(clamped);
+
+          scene.add(group);
         },
         undefined,
         (error) => {
-          console.error(`  ✗ Error loading ${modelData.name}:`, error);
+          console.error(`Error loading ${modelData.name}:`, error);
+
+          if (!missingModelWarnedRef.current.has(modelData.modelPath)) {
+            missingModelWarnedRef.current.add(modelData.modelPath);
+            toast.error(`3D file missing for ${modelData.name}. Showing preview shape.`);
+          }
+
+          addFallbackProxy(item, modelData);
         }
       );
     });
 
-    // Resize
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -222,7 +484,6 @@ export default function Viewer3D() {
     };
     window.addEventListener("resize", handleResize);
 
-    // Animate
     let animationId;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
@@ -231,9 +492,15 @@ export default function Viewer3D() {
     };
     animate();
 
-    // Cleanup
     return () => {
       window.removeEventListener("resize", handleResize);
+
+      renderer.domElement.removeEventListener("pointerdown", onPointerDown);
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerup", finishDrag);
+      renderer.domElement.removeEventListener("pointercancel", finishDrag);
+      renderer.domElement.removeEventListener("pointerleave", finishDrag);
+
       cancelAnimationFrame(animationId);
       controls.dispose();
       renderer.dispose();
@@ -244,7 +511,7 @@ export default function Viewer3D() {
         mountRef.current.removeChild(renderer.domElement);
       }
     };
-  }, [room, items]);
+  }, [room, items, updateItem]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -269,6 +536,83 @@ export default function Viewer3D() {
         }}
       >
         ← Back to Editor
+      </button>
+
+      {/* Design name */}
+      <div
+        style={{
+          position: "absolute",
+          top: 130,
+          right: 20,
+          zIndex: 10,
+          background: "rgba(0,0,0,0.7)",
+          padding: 10,
+          borderRadius: 8,
+          width: 300,
+        }}
+      >
+        <div style={{ color: "#fff", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+          3D Design Name
+        </div>
+        <input
+          value={designName || ""}
+          onChange={(e) => setDesignName(e.target.value)}
+          placeholder="e.g. Living Room #1"
+          style={{
+            width: "100%",
+            padding: "8px 10px",
+            borderRadius: 6,
+            border: "1px solid rgba(255,255,255,0.25)",
+            background: "rgba(255,255,255,0.08)",
+            color: "#fff",
+            outline: "none",
+            fontSize: 13,
+          }}
+        />
+      </div>
+
+      {/* Save Button */}
+      <button
+        onClick={saveDesign}
+        style={{
+          position: "absolute",
+          bottom: 25,
+          right: 150,
+          padding: "10px 20px",
+          background: "rgba(46, 204, 113, 0.9)",
+          color: "#fff",
+          border: "none",
+          borderRadius: 8,
+          cursor: "pointer",
+          fontSize: 14,
+          fontWeight: 600,
+          zIndex: 10,
+        }}
+      >
+        💾 Save Design
+      </button>
+
+      {/* Add To Cart Button */}
+      <button
+        onClick={handleAddToCart}
+        
+        style={{
+          position: "absolute",
+          bottom: 25,
+          right: 20,
+          padding: "10px 20px",
+          background: "rgba(245, 158, 11, 0.95)",
+          color: "#fff",
+          border: "none",
+          borderRadius: 8,
+          cursor: "pointer",
+          fontSize: 14,
+          fontWeight: 600,
+          zIndex: 10,
+        }}
+      >
+        Add To Cart
+        
       </button>
 
       {/* Info panel */}
@@ -320,7 +664,7 @@ export default function Viewer3D() {
           </div>
         )}
         {items.map((item, idx) => {
-          const model = getModelById(item.modelId);
+          const model = resolveModelData(item);
           return (
             <div key={idx} style={{ marginTop: 4 }}>
               {model?.name}: x={item.x.toFixed(2)}m, z={item.z.toFixed(2)}m,

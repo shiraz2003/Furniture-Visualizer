@@ -28,6 +28,9 @@ export function DesignProvider({ children }) {
   // Selected item
   const [selectedItemId, setSelectedItemId] = useState(null);
 
+  // Design name (persist so it survives navigation)
+  const [designName, setDesignName] = useState(() => loadState('design_name', 'My Design'));
+
   // Persist to sessionStorage on changes
   useEffect(() => {
     sessionStorage.setItem('design_room', JSON.stringify(room));
@@ -36,6 +39,10 @@ export function DesignProvider({ children }) {
   useEffect(() => {
     sessionStorage.setItem('design_items', JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    sessionStorage.setItem('design_name', JSON.stringify(designName));
+  }, [designName]);
 
   // Add a new item
   const addItem = useCallback((item) => {
@@ -70,6 +77,8 @@ export function DesignProvider({ children }) {
       setRoom,
       items,
       setItems,
+      designName,
+      setDesignName,
       selectedItemId,
       setSelectedItemId,
       selectedItem,

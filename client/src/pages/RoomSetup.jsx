@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDesign } from '../context/DesignContext';
 import toast from 'react-hot-toast';
+import Navbar from '../components/Navbar';
 
 export default function RoomSetup() {
   const navigate = useNavigate();
@@ -22,13 +23,13 @@ export default function RoomSetup() {
     const newErrors = {};
 
     if (formData.width < 1 || formData.width > 20) {
-      newErrors.width = "Width must be between 1 and 20 meters";
+      newErrors.width = "Between 1-20m";
     }
     if (formData.length < 1 || formData.length > 20) {
-      newErrors.length = "Length must be between 1 and 20 meters";
+      newErrors.length = "Between 1-20m";
     }
     if (formData.height < 2 || formData.height > 5) {
-      newErrors.height = "Height must be between 2 and 5 meters";
+      newErrors.height = "Between 2-5m";
     }
 
     setErrors(newErrors);
@@ -68,230 +69,143 @@ export default function RoomSetup() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Room Setup</h1>
-        <p style={styles.subtitle}>Configure your room dimensions and colors (all measurements in meters)</p>
-
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {/* Width */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Width (meters)</label>
-            <input
-              type="number"
-              name="width"
-              value={formData.width}
-              onChange={handleChange}
-              step="0.1"
-              min="1"
-              max="20"
-              style={{
-                ...styles.input,
-                borderColor: errors.width ? '#e74c3c' : '#ddd'
-              }}
-            />
-            {errors.width && <span style={styles.error}>{errors.width}</span>}
+    <div className="min-h-screen bg-[#fbfbfe] text-[#050315] font-sans selection:bg-[#2f27ce] selection:text-[#fbfbfe] flex flex-col">
+      <Navbar />
+      
+      <div className="flex-1 flex items-center justify-center p-4 pt-24 pb-4">
+        
+        <div className="bg-white rounded-[2rem] p-6 md:p-8 w-full max-w-2xl shadow-2xl shadow-[#050315]/5 border border-[#dedcff]/50">
+          <div className="mb-6 text-center">
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight mb-1 text-[#050315]">
+              Room Setup
+            </h1>
+            <p className="text-[#050315]/50 font-medium text-xs md:text-sm">
+              Configure your room dimensions and colors (meters)
+            </p>
           </div>
 
-          {/* Length */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Length (meters)</label>
-            <input
-              type="number"
-              name="length"
-              value={formData.length}
-              onChange={handleChange}
-              step="0.1"
-              min="1"
-              max="20"
-              style={{
-                ...styles.input,
-                borderColor: errors.length ? '#e74c3c' : '#ddd'
-              }}
-            />
-            {errors.length && <span style={styles.error}>{errors.length}</span>}
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
 
-          {/* Height */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Height (meters)</label>
-            <input
-              type="number"
-              name="height"
-              value={formData.height}
-              onChange={handleChange}
-              step="0.1"
-              min="2"
-              max="5"
-              style={{
-                ...styles.input,
-                borderColor: errors.height ? '#e74c3c' : '#ddd'
-              }}
-            />
-            {errors.height && <span style={styles.error}>{errors.height}</span>}
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-[10px] font-black text-[#050315]/50 uppercase tracking-widest mb-1 block ml-1">
+                  Width (m)
+                </label>
+                <input
+                  type="number"
+                  name="width"
+                  value={formData.width}
+                  onChange={handleChange}
+                  step="0.1"
+                  min="1"
+                  max="20"
+                  className={`w-full px-4 py-2.5 bg-[#fbfbfe] rounded-xl border-2 transition-all font-bold text-sm outline-none ${
+                    errors.width ? 'border-rose-400 focus:border-rose-500 focus:ring-4 focus:ring-rose-100' : 'border-transparent focus:border-[#2f27ce] focus:ring-4 focus:ring-[#dedcff]/50 text-[#050315]'
+                  }`}
+                />
+                {errors.width && <span className="text-rose-500 text-[10px] font-bold mt-1 ml-1 block">{errors.width}</span>}
+              </div>
 
-          {/* Wall Color */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Wall Color</label>
-            <div style={styles.colorInputWrapper}>
-              <input
-                type="color"
-                name="wallColor"
-                value={formData.wallColor}
-                onChange={handleChange}
-                style={styles.colorInput}
-              />
-              <span style={styles.colorValue}>{formData.wallColor}</span>
+              <div>
+                <label className="text-[10px] font-black text-[#050315]/50 uppercase tracking-widest mb-1 block ml-1">
+                  Length (m)
+                </label>
+                <input
+                  type="number"
+                  name="length"
+                  value={formData.length}
+                  onChange={handleChange}
+                  step="0.1"
+                  min="1"
+                  max="20"
+                  className={`w-full px-4 py-2.5 bg-[#fbfbfe] rounded-xl border-2 transition-all font-bold text-sm outline-none ${
+                    errors.length ? 'border-rose-400 focus:border-rose-500 focus:ring-4 focus:ring-rose-100' : 'border-transparent focus:border-[#2f27ce] focus:ring-4 focus:ring-[#dedcff]/50 text-[#050315]'
+                  }`}
+                />
+                {errors.length && <span className="text-rose-500 text-[10px] font-bold mt-1 ml-1 block">{errors.length}</span>}
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-[#050315]/50 uppercase tracking-widest mb-1 block ml-1">
+                  Height (m)
+                </label>
+                <input
+                  type="number"
+                  name="height"
+                  value={formData.height}
+                  onChange={handleChange}
+                  step="0.1"
+                  min="2"
+                  max="5"
+                  className={`w-full px-4 py-2.5 bg-[#fbfbfe] rounded-xl border-2 transition-all font-bold text-sm outline-none ${
+                    errors.height ? 'border-rose-400 focus:border-rose-500 focus:ring-4 focus:ring-rose-100' : 'border-transparent focus:border-[#2f27ce] focus:ring-4 focus:ring-[#dedcff]/50 text-[#050315]'
+                  }`}
+                />
+                {errors.height && <span className="text-rose-500 text-[10px] font-bold mt-1 ml-1 block">{errors.height}</span>}
+              </div>
             </div>
-          </div>
 
-          {/* Floor Color */}
-          <div style={styles.formGroup}>
-            <label style={styles.label}>Floor Color</label>
-            <div style={styles.colorInputWrapper}>
-              <input
-                type="color"
-                name="floorColor"
-                value={formData.floorColor}
-                onChange={handleChange}
-                style={styles.colorInput}
-              />
-              <span style={styles.colorValue}>{formData.floorColor}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              <div>
+                <label className="text-[10px] font-black text-[#050315]/50 uppercase tracking-widest mb-1 block ml-1">
+                  Wall Color
+                </label>
+                <div className="flex items-center gap-3 bg-[#fbfbfe] p-2 rounded-xl border-2 border-transparent hover:border-[#dedcff] transition-all">
+                  <input
+                    type="color"
+                    name="wallColor"
+                    value={formData.wallColor}
+                    onChange={handleChange}
+                    className="w-8 h-8 rounded-lg cursor-pointer border-0 p-0 bg-transparent"
+                  />
+                  <span className="text-xs font-bold text-[#050315]/70 uppercase">{formData.wallColor}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-[#050315]/50 uppercase tracking-widest mb-1 block ml-1">
+                  Floor Color
+                </label>
+                <div className="flex items-center gap-3 bg-[#fbfbfe] p-2 rounded-xl border-2 border-transparent hover:border-[#dedcff] transition-all">
+                  <input
+                    type="color"
+                    name="floorColor"
+                    value={formData.floorColor}
+                    onChange={handleChange}
+                    className="w-8 h-8 rounded-lg cursor-pointer border-0 p-0 bg-transparent"
+                  />
+                  <span className="text-xs font-bold text-[#050315]/70 uppercase">{formData.floorColor}</span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Room Preview */}
-          <div style={styles.preview}>
-            <h3 style={styles.previewTitle}>Preview</h3>
-            <div style={{
-              ...styles.previewRoom,
-              backgroundColor: formData.floorColor,
-              borderColor: formData.wallColor
-            }}>
-              <span style={styles.previewText}>
-                {formData.width}m × {formData.length}m × {formData.height}m
-              </span>
+            <div className="mt-4 p-4 bg-[#fbfbfe] rounded-2xl border border-[#dedcff]/50">
+              <h3 className="text-[10px] font-black text-[#050315]/50 uppercase tracking-widest mb-3 text-center">
+                Live Preview
+              </h3>
+              <div 
+                className="w-full h-20 rounded-xl border-4 flex items-center justify-center shadow-inner transition-colors duration-300"
+                style={{
+                  backgroundColor: formData.floorColor,
+                  borderColor: formData.wallColor
+                }}
+              >
+                <span className="text-xs font-black text-[#050315] bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-sm">
+                  {formData.width}m × {formData.length}m × {formData.height}m
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* Submit Button */}
-          <button type="submit" style={styles.submitButton}>
-            Continue to 2D Editor
-          </button>
-        </form>
+            <button 
+              type="submit" 
+              className="w-full py-3.5 mt-4 bg-[#2f27ce] text-[#fbfbfe] font-bold rounded-xl shadow-lg shadow-[#2f27ce]/30 hover:bg-[#433bff] active:scale-95 transition-all text-sm"
+            >
+              Continue to 2D Editor
+            </button>
+            
+          </form>
+        </div>
       </div>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    padding: '20px'
-  },
-  card: {
-    background: '#fff',
-    borderRadius: '16px',
-    padding: '40px',
-    maxWidth: '500px',
-    width: '100%',
-    boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-  },
-  title: {
-    margin: '0 0 10px 0',
-    fontSize: '28px',
-    color: '#333'
-  },
-  subtitle: {
-    margin: '0 0 30px 0',
-    color: '#666',
-    fontSize: '14px'
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px'
-  },
-  formGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px'
-  },
-  label: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#333'
-  },
-  input: {
-    padding: '12px',
-    borderRadius: '8px',
-    border: '2px solid #ddd',
-    fontSize: '16px',
-    outline: 'none',
-    transition: 'border-color 0.2s'
-  },
-  error: {
-    color: '#e74c3c',
-    fontSize: '12px'
-  },
-  colorInputWrapper: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px'
-  },
-  colorInput: {
-    width: '50px',
-    height: '40px',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer'
-  },
-  colorValue: {
-    fontSize: '14px',
-    color: '#666'
-  },
-  preview: {
-    marginTop: '10px',
-    padding: '15px',
-    background: '#f9f9f9',
-    borderRadius: '8px'
-  },
-  previewTitle: {
-    margin: '0 0 10px 0',
-    fontSize: '14px',
-    color: '#333'
-  },
-  previewRoom: {
-    width: '100%',
-    height: '100px',
-    borderRadius: '8px',
-    border: '4px solid',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  previewText: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#333',
-    background: 'rgba(255,255,255,0.8)',
-    padding: '5px 10px',
-    borderRadius: '4px'
-  },
-  submitButton: {
-    padding: '14px',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '16px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    marginTop: '10px'
-  }
-};

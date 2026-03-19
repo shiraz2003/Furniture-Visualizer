@@ -10,8 +10,15 @@ import MediaUpload from '../utils/mediaupload';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://iiwyuylfnxskjqnzgynd.supabase.co';
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // ඔබගේ සම්පූර්ණ Key එක මෙතැනට දාන්න
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+const getFinalImage = (imageValue) => {
+  if (Array.isArray(imageValue) && imageValue.length > 0) {
+    return imageValue[imageValue.length - 1];
+  }
+  return typeof imageValue === 'string' ? imageValue : null;
+};
 
 const Items = () => {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -26,9 +33,9 @@ const Items = () => {
   const [editId, setEditId] = useState(null);
 
   const [formData, setFormData] = useState({ 
-    name: '', category: '', description: '', price: '', image: null, glbFile: null 
+    name: '', category: '', description: '', price: '', images: [], glbFile: null 
   });
-  const [previewImage, setPreviewImage] = useState(null);
+  const [previewImages, setPreviewImages] = useState([]);
 
   const fetchItems = async () => {
     try {
@@ -45,10 +52,10 @@ const Items = () => {
   const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFormData({ ...formData, image: file });
-      setPreviewImage(URL.createObjectURL(file));
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setFormData({ ...formData, images: files });
+      setPreviewImages(files.map((file) => URL.createObjectURL(file)));
     }
   };
 
@@ -58,6 +65,12 @@ const Items = () => {
   };
 
   const handleEditClick = (item) => {
+    const existingImages = Array.isArray(item.image)
+      ? item.image
+      : item.image
+        ? [item.image]
+        : [];
+
     setIsEditing(true);
     setEditId(item._id);
     setFormData({
@@ -65,16 +78,16 @@ const Items = () => {
       category: item.category,
       description: item.description,
       price: item.price,
-      image: item.image,
+      images: existingImages,
       glbFile: null 
     });
-    setPreviewImage(item.image);
+    setPreviewImages(existingImages);
     setShowAddModal(true);
   };
 
   const resetForm = () => {
-    setFormData({ name: '', category: '', description: '', price: '', image: null, glbFile: null });
-    setPreviewImage(null);
+    setFormData({ name: '', category: '', description: '', price: '', images: [], glbFile: null });
+    setPreviewImages([]);
     setIsEditing(false);
     setEditId(null);
   };
@@ -82,9 +95,20 @@ const Items = () => {
   const handleAddItem = async () => {
     setLoading(true);
     try {
-      let finalImageUrl = formData.image;
-      if (formData.image instanceof File) {
-        finalImageUrl = await MediaUpload(formData.image);
+      if (!formData.images || formData.images.length === 0) {
+        toast.error("Please select at least one image");
+        setLoading(false);
+        return;
+      }
+
+      const finalImageUrls = [];
+      for (const image of formData.images) {
+        if (image instanceof File) {
+          const uploadedUrl = await MediaUpload(image);
+          finalImageUrls.push(uploadedUrl);
+        } else if (typeof image === 'string' && image.trim()) {
+          finalImageUrls.push(image);
+        }
       }
 
       const data = new FormData();
@@ -92,7 +116,7 @@ const Items = () => {
       data.append("category", formData.category);
       data.append("description", formData.description);
       data.append("price", formData.price);
-      data.append("image", finalImageUrl);
+      data.append("image", JSON.stringify(finalImageUrls));
       if (formData.glbFile) data.append("glbFile", formData.glbFile);
 
       if (isEditing) {
@@ -117,16 +141,35 @@ const Items = () => {
   const handleDelete = async () => {
     setLoading(true);
     try {
-      if (itemToDelete.image) {
-        const urlParts = itemToDelete.image.split('/');
-        const fileName = urlParts[urlParts.length - 1];
-        await supabase.storage.from('furniturevisualization').remove([fileName]);
+      const imageUrls = Array.isArray(itemToDelete.image)
+        ? itemToDelete.image
+        : itemToDelete.image
+          ? [itemToDelete.image]
+          : [];
+
+      if (imageUrls.length > 0) {
+        const fileNames = imageUrls
+          .map((url) => {
+            try {
+              const parsedUrl = new URL(url);
+              const pathParts = parsedUrl.pathname.split('/');
+              return pathParts[pathParts.length - 1];
+            } catch {
+              const urlParts = url.split('/');
+              return urlParts[urlParts.length - 1];
+            }
+          })
+          .filter(Boolean);
+
+        if (fileNames.length > 0) {
+          await supabase.storage.from('furniturevisualization').remove(fileNames);
+        }
       }
       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/furniture/delete/${itemToDelete._id}`);
       toast.success("Item removed successfully!");
       fetchItems();
       setShowDeleteModal(false);
-    } catch (error) {
+    } catch {
       toast.error("Error deleting item");
     } finally {
       setLoading(false);
@@ -157,7 +200,6 @@ const Items = () => {
         </div>
       </div>
 
-      {/* --- Mobile FAB (Floating Action Button) --- */}
       <button 
         onClick={() => { resetForm(); setShowAddModal(true); }}
         className="md:hidden fixed bottom-24 right-6 z-40 w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform border-2 border-white"
@@ -165,7 +207,6 @@ const Items = () => {
         <HiPlus size={28} />
       </button>
 
-      {/* --- Desktop View (Table) --- */}
       <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50/50 border-b border-slate-200">
@@ -181,7 +222,9 @@ const Items = () => {
               <tr key={item._id} className="hover:bg-slate-50/40 transition-colors">
                 <td className="p-4 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center">
-                    {item.image ? <img src={item.image} alt={item.name} className="w-full h-full object-cover" /> : <HiOutlinePhotograph />}
+                    {getFinalImage(item.image)
+                      ? <img src={getFinalImage(item.image)} alt={item.name} className="w-full h-full object-cover" />
+                      : <HiOutlinePhotograph />}
                   </div>
                   <span className="text-sm font-bold text-slate-700">{item.name}</span>
                 </td>
@@ -201,14 +244,15 @@ const Items = () => {
         </table>
       </div>
 
-      {/* --- Mobile View (Cards) --- */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
         {filteredItems.map(item => (
           <div key={item._id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center shrink-0">
-                  {item.image ? <img src={item.image} className="w-full h-full object-cover" /> : <HiOutlinePhotograph size={24} />}
+                  {getFinalImage(item.image)
+                    ? <img src={getFinalImage(item.image)} className="w-full h-full object-cover" />
+                    : <HiOutlinePhotograph size={24} />}
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-800">{item.name}</h4>
@@ -227,22 +271,30 @@ const Items = () => {
         ))}
       </div>
 
-      {/* Add / Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)}></div>
-          <form onSubmit={(e) => { e.preventDefault(); setShowConfirmModal(true); }} className="relative bg-white w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+          <form onSubmit={(e) => { e.preventDefault(); setShowConfirmModal(true); }} className="relative bg-white w-full max-w-4xl rounded-4xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
             <div className="p-6 border-b flex justify-between items-center bg-slate-50">
               <h3 className="font-bold text-slate-800">{isEditing ? 'Edit Furniture Item' : 'Add New Furniture Item'}</h3>
               <button type="button" onClick={() => setShowAddModal(false)} className="p-2 hover:bg-white rounded-full text-slate-400"><HiOutlineX size={20} /></button>
             </div>
             <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 overflow-y-auto max-h-[80vh]">
               <div className="space-y-4">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Preview Image</label>
-                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 overflow-hidden">
-                  {previewImage ? <img src={previewImage} alt="preview" className="w-full h-full object-cover" /> : <div className="text-center"><HiOutlinePhotograph size={32} className="mx-auto text-slate-300"/><p className="text-xs text-slate-400 mt-2">Upload Image</p></div>}
-                  <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} required={!isEditing} />
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Preview Images</label>
+                <label className="flex flex-col items-center justify-center w-full min-h-48 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 overflow-hidden p-3">
+                  {previewImages.length > 0 ? (
+                    <div className="w-full grid grid-cols-3 gap-2">
+                      {previewImages.slice(0, 6).map((img, index) => (
+                        <img key={index} src={img} alt={`preview-${index}`} className="w-full h-20 object-cover rounded-lg" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center"><HiOutlinePhotograph size={32} className="mx-auto text-slate-300"/><p className="text-xs text-slate-400 mt-2">Upload Images</p></div>
+                  )}
+                  <input type="file" className="hidden" accept="image/*" multiple onChange={handleImageChange} required={!isEditing} />
                 </label>
+                <p className="text-xs text-slate-500">You can select multiple images.</p>
 
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">3D Model (.glb) {isEditing && '(Optional)'}</label>
                 <label className="flex items-center gap-3 p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-indigo-400 transition-all">
@@ -272,8 +324,8 @@ const Items = () => {
                       <option value="Chair">Chair</option>
                       <option value="Desk">Desk</option>
                       <option value="Cupboard">Cupboard</option>
-                      <option value="Table">Table</option>
                       <option value="Bed">Bed</option>
+                      <option value="Table">Table</option>
                     </select>
                   </div>
                 </div>
@@ -290,9 +342,8 @@ const Items = () => {
         </div>
       )}
 
-      {/* Confirm Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-110 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)}></div>
           <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl animate-in zoom-in duration-200">
             <h3 className="text-lg font-bold text-slate-800">Confirm {isEditing ? 'Update' : 'Action'}</h3>
@@ -307,9 +358,8 @@ const Items = () => {
         </div>
       )}
 
-      {/* Delete Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-110 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)}></div>
           <div className="relative bg-white w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl animate-in zoom-in duration-200">
             <HiOutlineExclamationCircle size={48} className="text-red-500 mx-auto mb-4" />

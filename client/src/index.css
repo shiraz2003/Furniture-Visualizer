@@ -1,6 +1,215 @@
+@import url('https://fonts.googleapis.com/css2?family=Kufam:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+/* CSS Custom Properties for Color Palette */
+:root {
+  /* Primary Colors */
+  --color-primary: #355872;
+  --color-primary-dark: #2a4559;
+  --color-primary-light: #4a6b85;
+  
+  /* Secondary Colors */
+  --color-secondary: #7AAACE;
+  --color-secondary-dark: #6294b8;
+  --color-secondary-light: #8cb5d4;
+  
+  /* Accent Colors */
+  --color-accent: #9CD5FF;
+  --color-accent-dark: #7bc4ff;
+  --color-accent-light: #b5e0ff;
+  
+  /* Background Colors */
+  --color-background: #F7F8F0;
+  --color-background-dark: #e8e9db;
+  --color-background-light: #fefefc;
+  
+  /* Text Colors */
+  --color-text-primary: #355872;
+  --color-text-secondary: #6b7280;
+  --color-text-light: #9ca3af;
+  
+  /* Button Colors */
+  --color-btn-primary: #355872;
+  --color-btn-primary-hover: #2a4559;
+  --color-btn-secondary: #7AAACE;
+  --color-btn-secondary-hover: #6294b8;
+  --color-btn-accent: #9CD5FF;
+  --color-btn-accent-hover: #7bc4ff;
+}
 
-@theme {
-  --font-kufam: "Kufam", cursive;
-  --font-montserrat: "Montserrat", sans-serif;
+/* Global scrollbar hiding */
+html, body {
+  overflow-x: hidden;
+  background-color: var(--color-background);
+}
+
+/* Hide all scrollbars globally */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none;
+}
+
+html, body, * {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide scrollbar utility class */
+.scrollbar-hide {
+  /* IE and Edge */
+  -ms-overflow-style: none;
+  /* Firefox */
+  scrollbar-width: none;
+}
+/* Webkit browsers (Chrome, Safari, etc.) */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom Color Utility Classes */
+.bg-primary { background-color: var(--color-primary); }
+.bg-primary-dark { background-color: var(--color-primary-dark); }
+.bg-primary-light { background-color: var(--color-primary-light); }
+
+.bg-secondary { background-color: var(--color-secondary); }
+.bg-secondary-dark { background-color: var(--color-secondary-dark); }
+.bg-secondary-light { background-color: var(--color-secondary-light); }
+
+.bg-accent { background-color: var(--color-accent); }
+.bg-accent-dark { background-color: var(--color-accent-dark); }
+.bg-accent-light { background-color: var(--color-accent-light); }
+
+.bg-custom { background-color: var(--color-background); }
+.bg-custom-dark { background-color: var(--color-background-dark); }
+.bg-custom-light { background-color: var(--color-background-light); }
+
+/* Text Color Classes */
+.text-primary { color: var(--color-primary); }
+.text-secondary { color: var(--color-secondary); }
+.text-accent { color: var(--color-accent); }
+.text-custom { color: var(--color-text-primary); }
+
+/* Border Color Classes */
+.border-primary { border-color: var(--color-primary); }
+.border-secondary { border-color: var(--color-secondary); }
+.border-accent { border-color: var(--color-accent); }
+
+/* Button Styles */
+.btn-primary {
+  background-color: var(--color-btn-primary);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-btn-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(53, 88, 114, 0.3);
+}
+
+.btn-secondary {
+  background-color: var(--color-btn-secondary);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-btn-secondary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(122, 170, 206, 0.3);
+}
+
+.btn-accent {
+  background-color: var(--color-btn-accent);
+  color: var(--color-primary);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-accent:hover {
+  background-color: var(--color-btn-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(156, 213, 255, 0.3);
+}
+
+.btn-outline-primary {
+  background-color: transparent;
+  color: var(--color-primary);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  border: 2px solid var(--color-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--color-primary);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* Card Styles */
+.card-primary {
+  background-color: white;
+  border: 1px solid var(--color-accent);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px rgba(53, 88, 114, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(53, 88, 114, 0.15);
+  border-color: var(--color-secondary);
+}
+
+/* Form Input Styles */
+.input-primary {
+  border: 2px solid var(--color-accent-light);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background-color: white;
+}
+
+.input-primary:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(53, 88, 114, 0.1);
+}
+
+/* Navigation Styles */
+.nav-primary {
+  background-color: var(--color-primary);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-accent-light);
+}
+
+/* Custom Gradient Classes */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-accent) 100%);
+}
+
+.gradient-background {
+  background: linear-gradient(135deg, var(--color-background) 0%, var(--color-background-light) 100%);
 }

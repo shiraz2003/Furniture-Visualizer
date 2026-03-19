@@ -2,7 +2,13 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { addFurniture, getFurniture, deleteFurniture, updateFurniture } from "../../controllers/admin/furniturecontroller.js";
+import {
+  addFurniture,
+  getFurniture,
+  getFurnitureById,
+  deleteFurniture,
+  updateFurniture,
+} from "../../controllers/admin/furniturecontroller.js";
 
 const router = express.Router();
 
@@ -36,7 +42,9 @@ const upload = multer({
 
 // API Routes
 router.post("/add", upload.single("glbFile"), addFurniture);
+router.get("/", getFurniture);
 router.get("/all", getFurniture);
+router.get("/:id", getFurnitureById);
 router.delete("/delete/:id", deleteFurniture); 
 router.put("/update/:id", upload.single("glbFile"), updateFurniture);
 
