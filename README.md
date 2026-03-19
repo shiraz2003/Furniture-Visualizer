@@ -116,12 +116,24 @@ Create a `.env` file inside the **server** folder (`server/.env`) and configure:
 ```env
 MONGO_URI=your_mongodb_connection_string
 PORT=5000
+JWT_SECRET=fill_yours
+CLIENT_ORIGIN=your_origin
+
+EMAIL_USER=furniture12345store@gmail.com
+EMAIL_PASSWORD=your_apppassword
+
+PAYPAL_CLIENT_ID=your_clientID
+PAYPAL_SECRET=Your_PAYPAL_SANDBOX_secret
+PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
 ```
 
 Create a `.env` file inside the **client** folder (`client/.env`) and configure:
 
 ```env
 VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id
+VITE_BACKEND_URL=your_url
+VITE_GOOGLE_CLIENT_ID=your_googleclient_id
+VITE_GOOGLE_CLIENT_SECRET=your_googleclient_secret
 ```
 
 *(You may need additional variables depending on how features like email/Supabase are used in your implementation.)*
